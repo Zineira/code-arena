@@ -17,6 +17,16 @@ while True:
 
 ---
 
+## Jogar no browser (sem Unreal)
+
+A pasta `web/` tem uma versão que corre em qualquer browser, sem instalar nada: o mesmo jogo, a mesma linguagem, as mesmas regras e os mesmos 6 níveis, com uma arena 2D.
+
+- Abre `web/index.html` no browser (duplo clique serve).
+- O progresso fica guardado no próprio browser.
+- `web/engine.js` é a tradução direta do núcleo C++ para JavaScript; `node web/test.js` corre os mesmos testes da versão C++ e dá os mesmos resultados em todos os combates.
+
+A versão Unreal (3D) está descrita a seguir.
+
 ## Requisitos
 
 - Unreal Engine **5.4** (funciona também com 5.3, 5.5 e 5.6: clica com o botão direito no `CodeArena.uproject` e escolhe *Switch Unreal Engine version*).
