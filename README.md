@@ -25,6 +25,10 @@ A pasta `web/` tem uma versão que corre em qualquer browser, sem instalar nada:
 - O progresso fica guardado no próprio browser.
 - `web/engine.js` é a tradução direta do núcleo C++ para JavaScript; `node web/test.js` corre os mesmos testes da versão C++ e dá os mesmos resultados em todos os combates.
 
+### Multijogador
+
+No separador **Multijogador** cada pessoa escreve um lutador e publica-o na arena partilhada; qualquer um pode **Desafiar** os lutadores publicados (e os 6 bots da campanha) ou correr um **Torneio** de todos contra todos com ranking. Aqui está tudo desbloqueado, com 250 operações por turno e 100 de vida para todos. Como o combate é determinístico, cada browser calcula o mesmo resultado a partir dos dois códigos, por isso não é preciso servidor de jogo: só a lista de lutadores é partilhada (base de dados da página publicada no claude.ai). Aberto como ficheiro local, o multijogador funciona só contra os bots.
+
 A versão Unreal (3D) está descrita a seguir.
 
 ## Requisitos

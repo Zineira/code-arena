@@ -69,14 +69,14 @@ button { font: inherit; }
 .gutter div { font-family: var(--font-mono); font-size: 12px; line-height: var(--code-line); height: var(--code-line); text-align: right; padding-right: 8px; color: #4b5366; font-variant-numeric: tabular-nums; }
 .gutter div.running { background: var(--gold); color: #1a1205; font-weight: 600; }
 .gutter div.err { background: var(--bad); color: #fff; font-weight: 600; }
-#code { flex: 1; min-width: 0; resize: none; border: 0; outline: none; background: transparent; color: var(--code-ink); font-family: var(--font-mono); font-size: var(--code-size); line-height: var(--code-line); padding: 10px 12px; tab-size: 4; white-space: pre; overflow: auto; caret-color: var(--gold); }
+#code { flex: 1; min-width: 0; resize: none; border: 0; outline: none; background: transparent; color: var(--code-ink); font-family: var(--font-mono); font-size: var(--code-size); line-height: var(--code-line); padding: 10px 12px; tab-size: 4; white-space: pre; overflow: auto; caret-color: var(--gold); font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 .editor:focus-within { border-color: #4a5470; }
 .status { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .status b { color: var(--gold); font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Console */
-.console { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); height: 170px; overflow-y: auto; padding: 8px 10px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; }
+.console { font-variant-ligatures: none; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); height: 170px; overflow-y: auto; padding: 8px 10px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; }
 .console p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .c-info { color: var(--muted); }
 .c-print { color: var(--ink); }
@@ -129,17 +129,53 @@ canvas { width: 100%; max-width: 100%; aspect-ratio: 1 / 1; display: block; bord
 .help th { color: var(--muted); font-weight: 500; font-size: 12px; }
 .tag { font-size: 11px; color: var(--gold); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+
+/* Modes */
+.modes { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 3px; }
+.tab { background: transparent; color: var(--muted); border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
+.tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.tab[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); }
+body.pvp .campaign-only, body:not(.pvp) .pvp-only { display: none !important; }
+
+/* PvP */
+.publish { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.publish input { flex: 1 1 180px; min-width: 0; background: var(--code-bg); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; font: inherit; }
+.publish input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.publish-status { color: var(--muted); font-size: 12px; }
+.pvp-panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.pvp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pvp-head h2 { font-family: var(--font-display); font-size: 17px; margin: 0; flex: 1; }
+.pvp-note { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0; }
+.fighters { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+.fighter { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border-radius: var(--radius); padding: 8px 10px; }
+.fighter img { width: 26px; height: 26px; border-radius: 50%; flex: none; }
+.fighter .who { flex: 1; min-width: 0; }
+.fighter .fname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fighter .fmeta { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fighter .me { color: var(--player); font-size: 11px; font-weight: 600; margin-left: 6px; }
+.fighter .bot { color: var(--muted); font-size: 11px; margin-left: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.fighter .btn { padding: 5px 10px; }
+.ranking table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ranking th, .ranking td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+.ranking th:nth-child(2), .ranking td:nth-child(2) { text-align: left; }
+.ranking th { color: var(--muted); font-weight: 500; font-size: 12px; }
+.ranking tr.mine td { color: var(--player); }
+.ranking td.pts { font-weight: 700; color: var(--gold); }
 </style>
 
 <div class="app">
   <header class="top">
     <h1 class="brand">CODE <span>ARENA</span></h1>
-    <div class="level">
+    <nav class="modes" aria-label="Modo de jogo">
+      <button class="tab" id="modeCampaign" aria-pressed="true">Campanha</button>
+      <button class="tab" id="modePvp" aria-pressed="false">Multijogador</button>
+    </nav>
+    <div class="level campaign-only">
       <button class="btn square" id="prev" aria-label="Nível anterior">&lsaquo;</button>
       <div class="level-name" id="levelName"></div>
       <button class="btn square" id="next" aria-label="Nível seguinte">&rsaquo;</button>
     </div>
-    <div class="gold" id="gold"></div>
+    <div class="gold campaign-only" id="gold"></div>
   </header>
 
   <main class="main">
@@ -150,10 +186,15 @@ canvas { width: 100%; max-width: 100%; aspect-ratio: 1 / 1; display: block; bord
         <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Código do lutador"></textarea>
       </div>
       <div class="status" id="status"></div>
+      <div class="publish pvp-only">
+        <input id="fighterName" maxlength="24" placeholder="Nome do teu lutador" aria-label="Nome do teu lutador">
+        <button class="btn go" id="publish">Publicar lutador</button>
+        <span class="publish-status" id="publishStatus"></span>
+      </div>
       <div class="actions">
         <button class="btn go" id="run">Executar</button>
         <button class="btn" id="speed">Velocidade 1x</button>
-        <button class="btn shop" id="openShop">Loja</button>
+        <button class="btn shop campaign-only" id="openShop">Loja</button>
         <button class="btn" id="openHelp">Ajuda</button>
         <button class="btn" id="resetCode">Código inicial</button>
       </div>
@@ -178,6 +219,15 @@ canvas { width: 100%; max-width: 100%; aspect-ratio: 1 / 1; display: block; bord
         <canvas id="arena" width="700" height="700" aria-label="Arena"></canvas>
         <div class="banner"><span id="banner"></span></div>
       </div>
+      <section class="pvp-panel pvp-only" aria-labelledby="pvpTitle">
+        <div class="pvp-head">
+          <h2 id="pvpTitle">Lutadores na arena</h2>
+          <button class="btn shop" id="tournament">Torneio</button>
+        </div>
+        <p class="pvp-note" id="pvpNote"></p>
+        <div class="fighters" id="fighterList"></div>
+        <div class="ranking" id="ranking"></div>
+      </section>
     </section>
   </main>
 </div>
@@ -279,6 +329,21 @@ while True:
         attack()
 `;
 
+  const PVP_STARTER = `# Multijogador: tudo desbloqueado, 250 operações por turno, 100 de vida.
+# Publica o teu lutador e desafia os dos teus colegas.
+
+while True:
+    d = distance()
+    if d > 1:
+        move(dir_to_enemy())
+    elif enemy_action() == "charge":
+        block()
+    elif my_energy() >= 15:
+        attack()
+    else:
+        wait()
+`;
+
   const ACTION_PT = { idle: 'parado', think: 'a pensar...', wait: 'descansa', move: 'anda', attack: 'ataca', block: 'bloqueia',
     dash: 'investida', charge: 'a carregar', heavy: 'golpe pesado', channel: 'a concentrar', heal: 'cura', fireball: 'bola de fogo', tired: 'cansado' };
   const REASON_PT = { knockout: 'KO', 'time limit': 'tempo esgotado', 'script stopped': 'um programa parou', 'both scripts stopped': 'os dois programas pararam' };
@@ -288,7 +353,7 @@ while True:
 
   // ---------------------------------------------------------------- progress
   const SAVE_KEY = 'code-arena-save-v1';
-  const fresh = () => ({ gold: 0, unlocks: [], beaten: 0, selected: 0, code: CA.LEVELS.map(() => STARTER) });
+  const fresh = () => ({ gold: 0, unlocks: [], beaten: 0, selected: 0, code: CA.LEVELS.map(() => STARTER), mode: 'campaign', pvpCode: PVP_STARTER, pvpName: '' });
   let save = fresh();
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -315,7 +380,10 @@ while True:
   let popups = [];
   let fireball = null;
 
-  const level = () => CA.LEVELS[save.selected];
+  const isPvp = () => save.mode === 'pvp';
+  // Arena dimensions for the current mode (campaign level or the PvP arena).
+  const level = () => isPvp() ? { width: CA.PVP.width, height: CA.PVP.height, maxTicks: CA.PVP.maxTicks, hp: CA.PVP.hp } : CA.LEVELS[save.selected];
+  let opponent = null; // PvP: { name, script }
   const levelStart = () => { const l = level(); const mid = Math.floor(l.height / 2); return [[1, mid], [l.width - 2, mid]]; };
 
   // ---------------------------------------------------------------- console
@@ -363,8 +431,12 @@ while True:
     }
   }
 
+  function storeCode() {
+    if (isPvp()) save.pvpCode = code.value; else save.code[save.selected] = code.value;
+  }
+
   function onCodeChanged() {
-    save.code[save.selected] = code.value;
+    storeCode();
     errorLine = 0;
     renderGutter();
     renderStatus();
@@ -403,6 +475,14 @@ while True:
 
   // ---------------------------------------------------------------- HUD
   function renderLevel() {
+    $('modeCampaign').setAttribute('aria-pressed', String(!isPvp()));
+    $('modePvp').setAttribute('aria-pressed', String(isPvp()));
+    document.body.classList.toggle('pvp', isPvp());
+    if (isPvp()) {
+      $('levelDesc').innerHTML = 'Escreve um lutador e publica-o na arena. Depois escolhe um adversário e carrega em <b>Desafiar</b>, ou corre um <b>Torneio</b> com todos. Aqui está tudo desbloqueado: 250 operações por turno e 100 de vida para todos.';
+      $('n1').textContent = opponent ? opponent.name : 'Escolhe um adversário';
+      return;
+    }
     const [title, desc] = LEVEL_TEXT[save.selected];
     $('levelName').innerHTML = '<small>Nível ' + (save.selected + 1) + '/' + CA.LEVELS.length + '</small>' + title +
       (save.selected < save.beaten ? '<span class="beaten">✓ vencido</span>' : '');
@@ -420,7 +500,7 @@ while True:
 
   function renderStatus() {
     const c = cursorInfo();
-    let s = '<span>Ln ' + c.line + ', Col ' + c.col + '</span><span>' + opsPerTick() + ' operações por turno</span>';
+    let s = '<span>Ln ' + c.line + ', Col ' + c.col + '</span><span>' + (isPvp() ? CA.PVP.ops : opsPerTick()) + ' operações por turno</span>';
     if (running && match) s += '<span>a executar a linha <b>' + match.fighters[0].vm.line + '</b></span>';
     $('status').innerHTML = s;
   }
@@ -430,7 +510,7 @@ while True:
       const f = match.fighters[i];
       return { hp: Math.max(0, f.hp), maxHp: f.maxHp, energy: f.energy, act: match.tick > 0 ? ACTION_PT[f.last] || '' : '' };
     }
-    const maxHp = i === 0 ? playerMaxHp() : level().hp;
+    const maxHp = isPvp() ? CA.PVP.hp : i === 0 ? playerMaxHp() : level().hp;
     return { hp: maxHp, maxHp, energy: 100, act: '' };
   }
 
@@ -462,18 +542,24 @@ while True:
   }
 
   function startMatch() {
-    save.code[save.selected] = code.value;
+    storeCode();
     persist();
+    if (isPvp() && !opponent) {
+      log('Escolhe um adversário na lista "Lutadores na arena" e carrega em Desafiar.', 'warn');
+      return;
+    }
     banner = { text: '', color: '#fff' };
     errorLine = 0;
-    match = CA.makeMatch(save.selected, {
-      name: 'Player', script: code.value, maxHp: playerMaxHp(), opsPerTick: opsPerTick(), unlocks: new Set(save.unlocks),
-    }, (Math.random() * 0xffffffff) >>> 0 || 1);
+    match = isPvp()
+      ? CA.makePvpMatch({ name: myFighterName(), script: code.value }, opponent)
+      : CA.makeMatch(save.selected, {
+        name: 'Player', script: code.value, maxHp: playerMaxHp(), opsPerTick: opsPerTick(), unlocks: new Set(save.unlocks),
+      }, (Math.random() * 0xffffffff) >>> 0 || 1);
     const err = match.init();
     if (err) {
       match = null;
       if (err.fighter === 0) { errorLine = err.line; log('Erro de compilação na linha ' + err.line + ': ' + err.message, 'error'); }
-      else log('O script do inimigo não compila (linha ' + err.line + '): ' + err.message, 'error');
+      else log('O código do adversário não compila (linha ' + err.line + '): ' + err.message, 'error');
       banner = { text: 'ERRO NO CÓDIGO', color: COLORS.bad };
       renderAll();
       return;
@@ -481,7 +567,7 @@ while True:
     placeFighters();
     running = true;
     accumulator = 0;
-    log('--- Combate contra ' + LEVEL_TEXT[save.selected][0] + ' (' + opsPerTick() + ' operações por turno) ---');
+    log('--- Combate contra ' + (isPvp() ? opponent.name : LEVEL_TEXT[save.selected][0] + ' (' + opsPerTick() + ' operações por turno)') + ' ---');
     renderAll();
   }
 
@@ -494,7 +580,12 @@ while True:
 
   function toggleRun() { running ? stopMatch() : startMatch(); }
 
-  function popup(i, text, color) { popups.push({ i, text, color, t: 0, stack: popups.filter((p) => p.i === i).length }); }
+  function popup(i, text, color) {
+    // Keep at most 3 floating labels per fighter so fast speeds stay readable.
+    const mine = popups.filter((p) => p.i === i);
+    if (mine.length >= 3) popups.splice(popups.indexOf(mine[0]), 1);
+    popups.push({ i, text, color, t: 0, stack: mine.length % 3 });
+  }
 
   function stepMatch() {
     match.step();
@@ -529,6 +620,13 @@ while True:
     running = false;
     const lv = level();
     const why = REASON_PT[reason] || reason;
+    if (isPvp()) {
+      const outcome = winner === 0 ? ['VITÓRIA!', COLORS.good, 'good'] : winner === 1 ? ['DERROTA', COLORS.bad, 'error'] : ['EMPATE', COLORS.warn, 'warn'];
+      banner = { text: outcome[0], color: outcome[1] };
+      log(outcome[0] + ' contra ' + opponent.name + ' (' + why + ', ' + match.tick + ' turnos).', outcome[2]);
+      renderLevel();
+      return;
+    }
     if (winner === 0) {
       const first = save.selected >= save.beaten;
       const reward = first ? lv.reward : lv.repeat;
@@ -551,7 +649,7 @@ while True:
   function selectLevel(i) {
     if (i < 0 || i >= CA.LEVELS.length || i > save.beaten || i === save.selected) return;
     stopMatch();
-    save.code[save.selected] = code.value;
+    storeCode();
     save.selected = i;
     match = null;
     banner = { text: '', color: '#fff' };
@@ -630,6 +728,198 @@ while True:
   $('resetCode').addEventListener('click', () => { code.value = STARTER; onCodeChanged(); persist(); });
 
   function renderAll() { renderLevel(); renderCards(); renderGutter(); renderStatus(); }
+
+  function setMode(mode) {
+    if (save.mode === mode) return;
+    stopMatch();
+    storeCode();
+    save.mode = mode;
+    match = null;
+    banner = { text: '', color: '#fff' };
+    errorLine = 0;
+    code.value = isPvp() ? save.pvpCode : save.code[save.selected];
+    persist();
+    placeFighters();
+    renderAll();
+    if (isPvp()) renderFighters();
+  }
+  $('modeCampaign').addEventListener('click', () => setMode('campaign'));
+  $('modePvp').addEventListener('click', () => setMode('pvp'));
+
+  // ---------------------------------------------------------------- multiplayer
+  // Published fighters live in the shared db at fighters/<viewer id>; everyone
+  // reads them, each person writes only their own. Fights are deterministic,
+  // so every browser computes the same result from the two scripts.
+  const BOTS = CA.LEVELS.map((l, i) => ({ id: 'bot-' + i, name: LEVEL_TEXT[i][0], script: l.script, bot: true }));
+  let db = null, users = null, myId = null, canWrite = true;
+  let published = []; // [{ id, name, script, updatedAt }]
+  const myFighterName = () => (save.pvpName || '').trim() || 'Tu';
+
+  function allFighters() { return published.concat(BOTS); }
+
+  function relTime(ms) {
+    const m = Math.round((Date.now() - ms) / 60000);
+    if (!(m >= 0)) return '';
+    if (m < 1) return 'agora mesmo';
+    if (m < 60) return 'há ' + m + ' min';
+    const h = Math.round(m / 60);
+    return h < 24 ? 'há ' + h + ' h' : 'há ' + Math.round(h / 24) + ' d';
+  }
+
+  async function renderFighters() {
+    const list = $('fighterList');
+    const people = published.map((f) => f.id);
+    const profiles = users && people.length ? await users.profiles(people) : {};
+    list.textContent = '';
+    for (const f of allFighters()) {
+      const row = document.createElement('div');
+      row.className = 'fighter';
+      if (!f.bot && profiles[f.id]) {
+        const img = document.createElement('img');
+        img.src = profiles[f.id].avatarUrl;
+        img.alt = '';
+        row.appendChild(img);
+      }
+      const who = document.createElement('div');
+      who.className = 'who';
+      const name = document.createElement('div');
+      name.className = 'fname';
+      name.textContent = f.name;
+      const tag = document.createElement('span');
+      if (f.bot) { tag.className = 'bot'; tag.textContent = 'bot'; }
+      else if (f.id === myId) { tag.className = 'me'; tag.textContent = 'o teu'; }
+      name.appendChild(tag);
+      const meta = document.createElement('div');
+      meta.className = 'fmeta';
+      meta.textContent = f.bot ? 'adversário da campanha' : ((profiles[f.id] && profiles[f.id].name) || 'Alguém') + ' · ' + relTime(f.updatedAt);
+      who.append(name, meta);
+      row.appendChild(who);
+      const fight = document.createElement('button');
+      fight.className = 'btn go';
+      fight.textContent = 'Desafiar';
+      fight.addEventListener('click', () => {
+        stopMatch();
+        opponent = { name: f.name, script: f.script };
+        startMatch();
+      });
+      row.appendChild(fight);
+      if (!f.bot && f.id === myId) {
+        const remove = document.createElement('button');
+        remove.className = 'btn';
+        remove.textContent = 'Retirar';
+        remove.addEventListener('click', async () => {
+          try { await db.doc('fighters/' + myId).delete(); log('Retiraste o teu lutador da arena.', 'warn'); }
+          catch (e) { log('Não foi possível retirar o lutador (' + e.code + ').', 'error'); }
+        });
+        row.appendChild(remove);
+      }
+      list.appendChild(row);
+    }
+    $('pvpNote').textContent = db
+      ? (published.length ? published.length + ' lutador(es) publicado(s). Os bots são os adversários da campanha.' : 'Ainda ninguém publicou um lutador. Sê o primeiro! Entretanto podes treinar contra os bots.')
+      : 'Esta cópia da página não está ligada à arena partilhada: podes desafiar os bots, mas para jogar contra colegas abre o link partilhado do jogo.';
+  }
+
+  $('fighterName').value = save.pvpName || '';
+  $('fighterName').addEventListener('input', () => { save.pvpName = $('fighterName').value; persist(); });
+
+  $('publish').addEventListener('click', async () => {
+    storeCode();
+    persist();
+    const name = $('fighterName').value.trim();
+    const status = $('publishStatus');
+    if (!db || !myId) { status.textContent = 'Abre o link partilhado do jogo (com sessão iniciada) para publicar.'; return; }
+    if (!canWrite) { status.textContent = 'Só podes ver: pede ao dono do jogo acesso de Contributor para publicar.'; return; }
+    if (!name) { status.textContent = 'Dá um nome ao teu lutador.'; $('fighterName').focus(); return; }
+    if (code.value.length > CA.PVP.maxScript) { status.textContent = 'O código é demasiado grande (máximo 20 000 caracteres).'; return; }
+    const check = CA.makePvpMatch({ name, script: code.value }, { name: 'x', script: 'while True:\n    wait()\n' }).init();
+    if (check) {
+      errorLine = check.line;
+      renderGutter();
+      status.textContent = 'Corrige o erro na linha ' + check.line + ' antes de publicar.';
+      log('Erro de compilação na linha ' + check.line + ': ' + check.message, 'error');
+      return;
+    }
+    status.textContent = 'A publicar...';
+    try {
+      await db.doc('fighters/' + myId).set({ name, script: code.value, updatedAt: Date.now() });
+      status.textContent = 'Publicado! Os teus colegas já o podem desafiar.';
+      log('Publicaste "' + name + '" na arena.', 'good');
+    } catch (e) {
+      if (e.code === 'invalid_argument') { canWrite = false; status.textContent = 'Não tens permissão para publicar: pede acesso de Contributor ao dono do jogo.'; }
+      else status.textContent = 'Não foi possível publicar (' + e.code + '). Tenta outra vez.';
+    }
+  });
+
+  // Round robin: every fighter against every other, twice (swapping sides).
+  // Win 3 points, draw 1. Runs in small chunks so the page stays responsive.
+  let tournamentRunning = false;
+  $('tournament').addEventListener('click', () => {
+    if (tournamentRunning) return;
+    const fighters = allFighters();
+    const table = fighters.map((f) => ({ f, played: 0, w: 0, d: 0, l: 0, pts: 0 }));
+    const games = [];
+    for (let i = 0; i < fighters.length; i++) for (let j = 0; j < fighters.length; j++) if (i !== j) games.push([i, j]);
+    tournamentRunning = true;
+    $('tournament').disabled = true;
+    let next = 0;
+    const box = $('ranking');
+    const step = () => {
+      const until = performance.now() + 30;
+      while (next < games.length && performance.now() < until) {
+        const [i, j] = games[next++];
+        const r = CA.simulate(fighters[i], fighters[j]);
+        const a = table[i], b = table[j];
+        a.played++; b.played++;
+        if (r.winner === 0) { a.w++; b.l++; a.pts += 3; }
+        else if (r.winner === 1) { b.w++; a.l++; b.pts += 3; }
+        else { a.d++; b.d++; a.pts++; b.pts++; }
+      }
+      if (next < games.length) {
+        box.textContent = 'Torneio a decorrer: ' + next + ' / ' + games.length + ' combates...';
+        setTimeout(step, 0);
+        return;
+      }
+      tournamentRunning = false;
+      $('tournament').disabled = false;
+      table.sort((x, y) => y.pts - x.pts || y.w - x.w || x.f.name.localeCompare(y.f.name));
+      const t = document.createElement('table');
+      t.innerHTML = '<tr><th>#</th><th>Lutador</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Pts</th></tr>';
+      table.forEach((row, k) => {
+        const tr = document.createElement('tr');
+        if (row.f.id === myId) tr.className = 'mine';
+        [k + 1, row.f.name + (row.f.bot ? ' (bot)' : ''), row.played, row.w, row.d, row.l, row.pts].forEach((v, c) => {
+          const td = document.createElement('td');
+          td.textContent = v;
+          if (c === 6) td.className = 'pts';
+          tr.appendChild(td);
+        });
+        t.appendChild(tr);
+      });
+      box.textContent = '';
+      box.appendChild(t);
+      log('Torneio terminado: ' + games.length + ' combates. Vencedor: ' + table[0].f.name + ' com ' + table[0].pts + ' pontos.', 'good');
+    };
+    step();
+  });
+
+  (async () => {
+    if (!window.claude || !window.claude.use) { renderFighters(); return; }
+    [db, users] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (users) {
+      myId = await users.id();
+      const can = await users.can('data.write');
+      if (can === false) canWrite = false;
+    }
+    if (!db) { renderFighters(); return; }
+    db.collection('fighters').orderBy('updatedAt', 'desc').limit(200).onSnapshot((snap) => {
+      published = snap.docs.map((d) => {
+        const v = d.data() || {};
+        return { id: d.id, name: String(v.name || 'Sem nome').slice(0, 24), script: String(v.script || ''), updatedAt: Number(v.updatedAt) || 0 };
+      });
+      renderFighters();
+    }, () => { db = null; renderFighters(); });
+  })();
 
   // ---------------------------------------------------------------- arena drawing
   const canvas = $('arena');
@@ -777,11 +1067,12 @@ while True:
     requestAnimationFrame(frame);
   }
 
-  code.value = save.code[save.selected];
+  code.value = isPvp() ? save.pvpCode : save.code[save.selected];
   placeFighters();
   renderAll();
   log('Bem-vindo à Code Arena! Escreve o programa do teu lutador e carrega em Executar.');
   log('Abre a Ajuda para veres todas as funções disponíveis.');
+  if (isPvp()) renderFighters();
   requestAnimationFrame(frame);
 })();
 </script>

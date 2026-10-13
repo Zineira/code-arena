@@ -1397,7 +1397,36 @@ while True:
     });
   }
 
-  const api = { compile, VM, BuiltinTable, addStandardLibrary, display, Match, makeMatch, LEVELS, RULES, OK, SUSPEND, ERR };
+  // PvP: two player scripts, everything unlocked, same stats for both.
+  const PVP = { width: 7, height: 7, maxTicks: 300, hp: 100, ops: 250, maxScript: 20000 };
+
+  // Deterministic seed from both scripts, so every browser computes the same fight.
+  function seedFor(a, b) {
+    let h = 2166136261;
+    const s = a + '\u0000' + b;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h || 1;
+  }
+
+  function makePvpMatch(a, b) {
+    const mid = Math.floor(PVP.height / 2);
+    return new Match({
+      width: PVP.width, height: PVP.height, maxTicks: PVP.maxTicks, seed: seedFor(a.script, b.script),
+      fighters: [a, b].map((f) => ({ name: f.name, script: String(f.script).slice(0, PVP.maxScript), maxHp: PVP.hp, opsPerTick: PVP.ops, unlocks: 'all' })),
+      start: [1, mid, PVP.width - 2, mid],
+    });
+  }
+
+  // Runs a whole fight without animation. Returns { winner, tick, hp: [a, b], error }.
+  function simulate(a, b) {
+    const m = makePvpMatch(a, b);
+    const err = m.init();
+    if (err) return { winner: err.fighter === 0 ? 1 : 0, tick: 0, hp: [0, 0], error: err };
+    while (!m.over) { m.step(); m.events.length = 0; }
+    return { winner: m.winner, tick: m.tick, hp: [m.fighters[0].hp, m.fighters[1].hp] };
+  }
+
+  const api = { PVP, makePvpMatch, simulate, compile, VM, BuiltinTable, addStandardLibrary, display, Match, makeMatch, LEVELS, RULES, OK, SUSPEND, ERR };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CodeArena = api;
 })(typeof window !== 'undefined' ? window : globalThis);

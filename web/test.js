@@ -157,5 +157,16 @@ expect(fight(2, TURTLE_SOLVER, new Set(['scanner', 'radar', 'block']), 100, 'sol
   expect(printed === 'True False', "move() results, got '" + printed + "'");
 }
 
+console.log('PvP tests');
+{
+  const a = { name: 'A', script: ADVANCED }, b = { name: 'B', script: STARTER };
+  const r1 = CA.simulate(a, b), r2 = CA.simulate(a, b);
+  expect(r1.winner === r2.winner && r1.tick === r2.tick && r1.hp[0] === r2.hp[0], 'pvp is deterministic');
+  expect(r1.winner === 0, 'advanced beats starter in pvp');
+  const bad = CA.simulate({ name: 'X', script: 'while True\n' }, b);
+  expect(bad.winner === 1 && bad.error, 'a script that does not compile loses');
+  console.log('  advanced vs starter -> winner', r1.winner, 'tick', r1.tick, 'hp', r1.hp.join('/'));
+}
+
 console.log(failures ? '\n' + failures + ' FAILURE(S)' : '\nALL TESTS PASSED');
 process.exit(failures ? 1 : 0);
