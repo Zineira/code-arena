@@ -1,0 +1,13 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.4",
+	"Category": "",
+	"Description": "Code Arena - programa o teu lutador e vence combates com codigo.",
+	"Modules": [
+		{
+			"Name": "CodeArena",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
