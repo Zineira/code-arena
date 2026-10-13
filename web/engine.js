@@ -996,9 +996,12 @@
     return { attack: RULES.attackCost, dash: RULES.dashCost, heavy: RULES.heavyCost, heal: RULES.healCost, fireball: RULES.fireballCost }[action] || 0;
   }
 
+  // A match between 2..8 fighters, free for all. In every script "enemy"
+  // means the nearest opponent still standing (ties go to the lowest
+  // index), so 1v1 scripts work unchanged in bigger battles.
   class Match {
-    // config: { width, height, maxTicks, seed, fighters: [{name, script, maxHp, opsPerTick, unlocks:Set|'all'}], start: [x0,y0,x1,y1] }
-    // Returns via init(): null on success or { fighter, line, message }.
+    // config: { width, height, maxTicks, seed, fighters: [{name, script, maxHp, opsPerTick, unlocks:Set|'all'}], start: [x0,y0,x1,y1,...] }
+    // init() returns null on success or { fighter, line, message }.
     constructor(config) {
       this.config = config;
       this.tick = 0;
@@ -1016,17 +1019,17 @@
 
     init() {
       const c = this.config;
-      for (let i = 0; i < 2; i++) {
+      const n = c.fighters.length;
+      for (let i = 0; i < n; i++) {
         const fc = c.fighters[i];
-        const f = {
+        this.fighters.push({
           name: fc.name, x: c.start[i * 2], y: c.start[i * 2 + 1],
           hp: fc.maxHp, maxHp: fc.maxHp, energy: RULES.maxEnergy, ops: fc.opsPerTick,
-          facing: i === 0 ? 'East' : 'West', last: 'idle', blocking: false, halted: false,
+          facing: c.start[i * 2] < c.width / 2 ? 'East' : 'West', last: 'idle', blocking: false, halted: false, out: false,
           requested: 'idle', dir: 'North', pending: 'idle', busy: 0,
-        };
-        this.fighters.push(f);
+        });
       }
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < n; i++) {
         const table = this.bind(i);
         const res = compile(c.fighters[i].script, table, {
           allowFor: this.unlocked(i, 'for'), allowDef: this.unlocked(i, 'def'), allowLists: this.unlocked(i, 'lists'),
@@ -1043,7 +1046,25 @@
 
     inBounds(x, y) { return x >= 0 && y >= 0 && x < this.config.width && y < this.config.height; }
 
-    distance() { const [a, b] = this.fighters; return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
+    dist(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
+
+    // Nearest opponent still in the fight (or the nearest one at all once everyone else is out).
+    enemyOf(i) {
+      const me = this.fighters[i];
+      let best = -1, bestD = Infinity, fallback = -1;
+      for (let j = 0; j < this.fighters.length; j++) {
+        if (j === i) continue;
+        if (fallback < 0) fallback = j;
+        if (this.fighters[j].out) continue;
+        const d = this.dist(me, this.fighters[j]);
+        if (d < bestD) { bestD = d; best = j; }
+      }
+      return best >= 0 ? best : fallback;
+    }
+
+    occupied(x, y, except) {
+      return this.fighters.some((f, j) => j !== except && !f.out && f.x === x && f.y === y);
+    }
 
     dirTowards(fx, fy, tx, ty) {
       const dx = tx - fx, dy = ty - fy;
@@ -1053,7 +1074,7 @@
 
     bind(i) {
       const me = () => this.fighters[i];
-      const them = () => this.fighters[1 - i];
+      const them = () => this.fighters[this.enemyOf(i)];
       const t = new BuiltinTable();
       const ok = (value) => ({ status: OK, value });
       const parseDir = (v) => (typeof v === 'string' && DELTA[v] ? v : null);
@@ -1065,10 +1086,11 @@
       const sensors = {
         my_x: () => me().x, my_y: () => me().y, my_hp: () => me().hp, my_energy: () => me().energy,
         enemy_x: () => them().x, enemy_y: () => them().y, enemy_hp: () => them().hp, enemy_energy: () => them().energy,
-        distance: () => this.distance(), get_tick: () => this.tick,
+        distance: () => this.dist(me(), them()), get_tick: () => this.tick,
         arena_width: () => this.config.width, arena_height: () => this.config.height,
         enemy_action: () => them().last,
         dir_to_enemy: () => this.dirTowards(me().x, me().y, them().x, them().y),
+        enemy_count: () => this.fighters.filter((f, j) => j !== i && !f.out).length,
       };
       for (const [name, fn] of Object.entries(sensors)) t.addFunction(name, 0, 0, () => ok(fn()));
 
@@ -1077,7 +1099,7 @@
         const d = parseDir(args[0]);
         if (!d) return dirError(args[0]);
         const nx = me().x + DELTA[d][0], ny = me().y + DELTA[d][1];
-        return ok(this.inBounds(nx, ny) && !(nx === them().x && ny === them().y));
+        return ok(this.inBounds(nx, ny) && !this.occupied(nx, ny, i));
       });
 
       const action = (name, act, needsDir) => {
@@ -1109,6 +1131,7 @@
       const f = this.fighters[i];
       hasResult[i] = false;
       results[i] = null;
+      if (f.out) { f.requested = 'idle'; return; }
       if (f.busy > 0) {
         f.busy--;
         if (f.busy === 0) { f.requested = f.pending; f.pending = 'idle'; hasResult[i] = true; }
@@ -1146,94 +1169,114 @@
       if (this.over) return;
       this.tick++;
       const F = this.fighters;
-      const results = [null, null], hasResult = [false, false];
-      this.decide(0, results, hasResult);
-      this.decide(1, results, hasResult);
-      const acts = [F[0].requested, F[1].requested];
+      const n = F.length;
+      const results = new Array(n).fill(null), hasResult = new Array(n).fill(false);
+      for (let i = 0; i < n; i++) this.decide(i, results, hasResult);
+      const acts = F.map((f) => f.requested);
+      const moving = (i) => acts[i] === 'move' || acts[i] === 'dash';
 
       // 1) blocking
-      for (let i = 0; i < 2; i++) F[i].blocking = acts[i] === 'block';
+      for (let i = 0; i < n; i++) F[i].blocking = acts[i] === 'block';
 
-      // 2) movement
-      const wants = [false, false];
-      const targets = [[F[0].x, F[0].y], [F[1].x, F[1].y]];
-      for (let i = 0; i < 2; i++) {
-        if (acts[i] !== 'move' && acts[i] !== 'dash') continue;
-        const f = F[i], e = F[1 - i];
+      // 2) movement: everyone moves at once; conflicting moves are cancelled
+      const wants = new Array(n).fill(false);
+      const targets = F.map((f) => [f.x, f.y]);
+      for (let i = 0; i < n; i++) {
+        if (!moving(i)) continue;
+        const f = F[i];
         f.facing = f.dir;
         const [dx, dy] = DELTA[f.dir];
         let tx = f.x, ty = f.y;
         for (let s = 0; s < (acts[i] === 'dash' ? 2 : 1); s++) {
           const nx = tx + dx, ny = ty + dy;
-          if (!this.inBounds(nx, ny) || (nx === e.x && ny === e.y)) break;
+          if (!this.inBounds(nx, ny) || this.occupied(nx, ny, i)) break;
           tx = nx; ty = ny;
         }
         targets[i] = [tx, ty];
         wants[i] = tx !== f.x || ty !== f.y;
       }
-      if (wants[0] && wants[1]) {
-        const same = targets[0][0] === targets[1][0] && targets[0][1] === targets[1][1];
-        const swap = targets[0][0] === F[1].x && targets[0][1] === F[1].y && targets[1][0] === F[0].x && targets[1][1] === F[0].y;
-        if (swap) { wants[0] = wants[1] = false; }
-        else if (same) { wants[(nextRandom(this.rng) >>> 8) & 1] = false; }
+      const at = (i, x, y) => targets[i][0] === x && targets[i][1] === y;
+      // Two fighters swapping cells block each other.
+      const swapped = new Array(n).fill(false);
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+        if (wants[i] && wants[j] && at(i, F[j].x, F[j].y) && at(j, F[i].x, F[i].y)) swapped[i] = swapped[j] = true;
       }
-      for (let pass = 0; pass < 2; pass++) {
-        for (let i = 0; i < 2; i++) {
-          const o = 1 - i;
-          const ox = wants[o] ? targets[o][0] : F[o].x, oy = wants[o] ? targets[o][1] : F[o].y;
-          if (wants[i] && targets[i][0] === ox && targets[i][1] === oy) wants[i] = false;
+      for (let i = 0; i < n; i++) if (swapped[i]) wants[i] = false;
+      // Several fighters stepping into the same cell: a coin flip picks who gets it.
+      const done = new Array(n).fill(false);
+      for (let i = 0; i < n; i++) {
+        if (!wants[i] || done[i]) continue;
+        const group = [];
+        for (let j = i; j < n; j++) if (wants[j] && at(j, targets[i][0], targets[i][1])) group.push(j);
+        group.forEach((j) => { done[j] = true; });
+        if (group.length < 2) continue;
+        const r = nextRandom(this.rng) >>> 8;
+        const keep = group.length === 2 ? group[1 - (r & 1)] : group[r % group.length];
+        group.forEach((j) => { if (j !== keep) wants[j] = false; });
+      }
+      // A move into a cell someone else still occupies (or ends up in) fails.
+      for (let pass = 0; pass < n; pass++) {
+        for (let i = 0; i < n; i++) {
+          if (!wants[i]) continue;
+          for (let j = 0; j < n; j++) {
+            if (j === i || F[j].out) continue;
+            const ox = wants[j] ? targets[j][0] : F[j].x, oy = wants[j] ? targets[j][1] : F[j].y;
+            if (at(i, ox, oy)) { wants[i] = false; break; }
+          }
         }
       }
-      for (let i = 0; i < 2; i++) {
-        if (acts[i] === 'move' || acts[i] === 'dash') {
+      for (let i = 0; i < n; i++) {
+        if (moving(i)) {
           if (wants[i]) { F[i].x = targets[i][0]; F[i].y = targets[i][1]; this.event('moved', i, { text: acts[i] }); }
           results[i] = wants[i];
         }
       }
 
       // 3) attacks (after movement, so stepping away dodges)
-      const damage = [0, 0];
-      const dist = this.distance();
-      for (let i = 0; i < 2; i++) {
-        const f = F[i], e = F[1 - i];
+      const damage = new Array(n).fill(0);
+      const targetOf = F.map((_, i) => this.enemyOf(i));
+      for (let i = 0; i < n; i++) {
+        const f = F[i];
+        if (f.out) continue;
+        const ti = targetOf[i], e = F[ti];
         if (acts[i] === 'attack' || acts[i] === 'heavy') {
           f.facing = this.dirTowards(f.x, f.y, e.x, e.y);
           const heavy = acts[i] === 'heavy';
-          if (dist !== 1) { this.event('missed', i, { text: acts[i] }); results[i] = false; continue; }
+          if (e.out || this.dist(f, e) !== 1) { this.event('missed', i, { text: acts[i] }); results[i] = false; continue; }
           if (e.blocking) {
             const through = heavy ? RULES.heavyBlockedDamage : 0;
-            damage[1 - i] += through;
+            damage[ti] += through;
             if (!heavy) f.energy = Math.max(0, f.energy - RULES.parryEnergyLoss);
-            this.event('blocked', i, { target: 1 - i, amount: through, text: acts[i] });
+            this.event('blocked', i, { target: ti, amount: through, text: acts[i] });
             results[i] = heavy;
             continue;
           }
           const amount = heavy ? RULES.heavyDamage : RULES.attackDamage;
-          damage[1 - i] += amount;
-          this.event('hit', i, { target: 1 - i, amount, text: acts[i] });
+          damage[ti] += amount;
+          this.event('hit', i, { target: ti, amount, text: acts[i] });
           results[i] = true;
         } else if (acts[i] === 'fireball') {
           f.facing = f.dir;
           const [dx, dy] = DELTA[f.dir];
-          let cx = f.x, cy = f.y, hit = false;
-          for (let s = 0; s < RULES.fireballRange; s++) {
+          let cx = f.x, cy = f.y, hitIdx = -1;
+          for (let s = 0; s < RULES.fireballRange && hitIdx < 0; s++) {
             const nx = cx + dx, ny = cy + dy;
             if (!this.inBounds(nx, ny)) break;
             cx = nx; cy = ny;
-            if (cx === e.x && cy === e.y) { hit = true; break; }
+            hitIdx = F.findIndex((g, j) => j !== i && !g.out && g.x === cx && g.y === cy);
           }
           let amount = 0;
-          if (hit) { amount = e.blocking ? RULES.fireballBlockedDamage : RULES.fireballDamage; damage[1 - i] += amount; }
-          this.event('fireball', i, { target: hit ? 1 - i : -1, amount, x: cx, y: cy, blocked: hit && e.blocking });
-          results[i] = hit;
+          if (hitIdx >= 0) { amount = F[hitIdx].blocking ? RULES.fireballBlockedDamage : RULES.fireballDamage; damage[hitIdx] += amount; }
+          this.event('fireball', i, { target: hitIdx, amount, x: cx, y: cy, blocked: hitIdx >= 0 && F[hitIdx].blocking });
+          results[i] = hitIdx >= 0;
         }
       }
-      F[0].hp -= damage[0];
-      F[1].hp -= damage[1];
+      for (let i = 0; i < n; i++) F[i].hp -= damage[i];
 
       // 4) heals, energy, results
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < n; i++) {
         const f = F[i];
+        if (f.out) continue;
         if (acts[i] === 'heal' && f.hp > 0) {
           const before = f.hp;
           f.hp = Math.min(f.maxHp, f.hp + RULES.healAmount);
@@ -1247,15 +1290,30 @@
         if (hasResult[i]) f.vm.setYieldResult(results[i]);
       }
 
-      // 5) end conditions
-      const dead0 = F[0].hp <= 0, dead1 = F[1].hp <= 0;
-      if (dead0 || dead1) return this.finish(dead0 && dead1 ? -1 : dead0 ? 1 : 0, 'knockout');
-      if (F[0].halted || F[1].halted) {
-        return this.finish(F[0].halted && F[1].halted ? -1 : F[0].halted ? 1 : 0, F[0].halted && F[1].halted ? 'both scripts stopped' : 'script stopped');
+      // 5) eliminations and end conditions
+      let knockout = false;
+      for (let i = 0; i < n; i++) {
+        const f = F[i];
+        if (f.out) continue;
+        if (f.hp <= 0) knockout = true;
+        if (f.hp <= 0 || f.halted) { f.out = true; f.blocking = false; this.event('eliminated', i, { text: f.hp <= 0 ? 'knockout' : 'script stopped' }); }
+      }
+      const standing = F.map((_, i) => i).filter((i) => !F[i].out);
+      if (standing.length <= 1) {
+        if (standing.length === 1) return this.finish(standing[0], knockout ? 'knockout' : 'script stopped');
+        // Everyone went out on the same tick: a fighter whose script stopped
+        // but still has health beats those knocked out.
+        const alive = F.map((_, i) => i).filter((i) => F[i].hp > 0);
+        if (alive.length === 1) return this.finish(alive[0], 'knockout');
+        return this.finish(-1, knockout ? 'knockout' : 'both scripts stopped');
       }
       if (this.tick >= this.config.maxTicks) {
-        const r0 = F[0].hp / F[0].maxHp, r1 = F[1].hp / F[1].maxHp;
-        this.finish(r0 === r1 ? -1 : r0 > r1 ? 0 : 1, 'time limit');
+        let best = -1, bestRatio = -1, tie = false;
+        for (const i of standing) {
+          const r = F[i].hp / F[i].maxHp;
+          if (r > bestRatio) { bestRatio = r; best = i; tie = false; } else if (r === bestRatio) tie = true;
+        }
+        this.finish(tie ? -1 : best, 'time limit');
       }
     }
 
@@ -1426,7 +1484,25 @@ while True:
     return { winner: m.winner, tick: m.tick, hp: [m.fighters[0].hp, m.fighters[1].hp] };
   }
 
-  const api = { PVP, makePvpMatch, simulate, compile, VM, BuiltinTable, addStandardLibrary, display, Match, makeMatch, LEVELS, RULES, OK, SUSPEND, ERR };
+  // Free-for-all battle for 2..8 players from a lobby. Bigger arena when crowded.
+  const BATTLE = { maxPlayers: 8 };
+  const BATTLE_SPOTS = [[1, 4], [7, 4], [4, 1], [4, 7], [1, 1], [7, 7], [1, 7], [7, 1]];
+
+  function makeBattle(players, seed) {
+    if (players.length <= 2) {
+      const m = makePvpMatch(players[0], players[1]);
+      m.rng.value = (seed >>> 0) || 1;
+      return m;
+    }
+    const list = players.slice(0, BATTLE.maxPlayers);
+    return new Match({
+      width: 9, height: 9, maxTicks: PVP.maxTicks, seed: (seed >>> 0) || 1,
+      fighters: list.map((f) => ({ name: f.name, script: String(f.script).slice(0, PVP.maxScript), maxHp: PVP.hp, opsPerTick: PVP.ops, unlocks: 'all' })),
+      start: [].concat(...BATTLE_SPOTS.slice(0, list.length)),
+    });
+  }
+
+  const api = { PVP, BATTLE, makeBattle, makePvpMatch, simulate, compile, VM, BuiltinTable, addStandardLibrary, display, Match, makeMatch, LEVELS, RULES, OK, SUSPEND, ERR };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CodeArena = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -161,6 +161,18 @@ body.pvp .campaign-only, body:not(.pvp) .pvp-only { display: none !important; }
 .ranking th { color: var(--muted); font-weight: 500; font-size: 12px; }
 .ranking tr.mine td { color: var(--player); }
 .ranking td.pts { font-weight: 700; color: var(--gold); }
+.lobby-list .fighter.offline { opacity: 0.5; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.lobby-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.board .row { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.board .row.out { opacity: 0.45; }
+.board .row.me { border-color: var(--player); }
+.board .top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.board .nm { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .st { color: var(--muted); font-size: 11px; font-style: italic; white-space: nowrap; }
+.board .bar { height: 8px; }
+.board .bar i { background: var(--c); }
 </style>
 
 <div class="app">
@@ -202,7 +214,8 @@ body.pvp .campaign-only, body:not(.pvp) .pvp-only { display: none !important; }
     </section>
 
     <section class="col">
-      <div class="cards">
+      <div class="board" id="battleBoard" hidden></div>
+      <div class="cards" id="duelCards">
         <div class="card p">
           <div class="card-head"><span class="card-name" id="n0">Tu</span><span class="card-act" id="a0"></span></div>
           <div class="bar hp"><i id="hp0"></i><span id="hpt0"></span></div>
@@ -219,6 +232,21 @@ body.pvp .campaign-only, body:not(.pvp) .pvp-only { display: none !important; }
         <canvas id="arena" width="700" height="700" aria-label="Arena"></canvas>
         <div class="banner"><span id="banner"></span></div>
       </div>
+      <section class="pvp-panel pvp-only" aria-labelledby="lobbyTitle">
+        <div class="pvp-head"><h2 id="lobbyTitle">Sala de combate</h2></div>
+        <p class="pvp-note">Combinem um nome de sala, entrem todos com o vosso lutador e, quando estiverem prontos, alguém carrega em <b>Começar combate</b>: até 8 lutadores lutam ao mesmo tempo na mesma arena, todos contra todos. Nos vossos códigos, <code>enemy_x()</code>, <code>distance()</code> e companhia referem-se ao adversário mais próximo; <code>enemy_count()</code> diz quantos ainda estão de pé.</p>
+        <div class="publish">
+          <input id="roomName" maxlength="40" placeholder="Nome da sala, ex: turma-a" aria-label="Nome da sala">
+          <button class="btn go" id="joinRoom">Entrar com o meu lutador</button>
+          <button class="btn" id="leaveRoom" hidden>Sair da sala</button>
+        </div>
+        <div class="fighters lobby-list" id="lobbyList"></div>
+        <div class="lobby-actions">
+          <button class="btn shop" id="startBattle" disabled>Começar combate</button>
+          <button class="btn" id="replayBattle" hidden>Rever último combate</button>
+          <span class="publish-status" id="lobbyStatus"></span>
+        </div>
+      </section>
       <section class="pvp-panel pvp-only" aria-labelledby="pvpTitle">
         <div class="pvp-head">
           <h2 id="pvpTitle">Lutadores na arena</h2>
@@ -262,6 +290,7 @@ body.pvp .campaign-only, body:not(.pvp) .pvp-only { display: none !important; }
       <li><code>my_x()</code> <code>my_y()</code> <code>my_hp()</code> <code>my_energy()</code></li>
       <li><code>enemy_x()</code> <code>enemy_y()</code> <code>enemy_hp()</code> <code>distance()</code> <code>get_tick()</code></li>
       <li><code>arena_width()</code> <code>arena_height()</code> <code>can_move(dir)</code> <code>opposite(dir)</code></li>
+      <li><code>enemy_count()</code>: quantos adversários ainda estão de pé (útil nas salas com vários lutadores, onde <code>enemy_*</code> e <code>distance()</code> se referem ao adversário mais próximo)</li>
       <li><code>dir_to_enemy()</code> <span class="tag">Radar</span></li>
       <li><code>enemy_action()</code> <code>enemy_energy()</code> <span class="tag">Scanner</span>. <code>enemy_action()</code> devolve "wait", "move", "attack", "block", "dash", "charge", "heavy", "channel", "heal", "fireball", "tired", "think" ou "idle".</li>
     </ul>
@@ -376,13 +405,19 @@ while True:
   let errorLine = 0;
   let banner = { text: '', color: '#fff' };
   // Visual state per fighter: interpolated grid position, animation timers.
-  const vis = [0, 1].map(() => ({ x: 0, y: 0, tx: 0, ty: 0, facing: 'East', lunge: 1, flash: 0, dead: 0 }));
+  let vis = [];
+  // Lobby battle being shown: { room, names: [...], ids: [...], width, height } or null.
+  let battle = null;
+  // Index of "you" in the current match (-1 when only watching).
+  let meIdx = 0;
+  const PALETTE = ['#4d8eff', '#ff6150', '#47c97c', '#f2c94c', '#c77dff', '#ff9f43', '#2ec4b6', '#f15bb5'];
+  const colorOf = (i) => battle ? PALETTE[i % PALETTE.length] : i === 0 ? COLORS.player : COLORS.enemy;
   let popups = [];
   let fireball = null;
 
   const isPvp = () => save.mode === 'pvp';
   // Arena dimensions for the current mode (campaign level or the PvP arena).
-  const level = () => isPvp() ? { width: CA.PVP.width, height: CA.PVP.height, maxTicks: CA.PVP.maxTicks, hp: CA.PVP.hp } : CA.LEVELS[save.selected];
+  const level = () => battle ? { width: battle.width, height: battle.height, maxTicks: CA.PVP.maxTicks, hp: CA.PVP.hp } : isPvp() ? { width: CA.PVP.width, height: CA.PVP.height, maxTicks: CA.PVP.maxTicks, hp: CA.PVP.hp } : CA.LEVELS[save.selected];
   let opponent = null; // PvP: { name, script }
   const levelStart = () => { const l = level(); const mid = Math.floor(l.height / 2); return [[1, mid], [l.width - 2, mid]]; };
 
@@ -408,7 +443,7 @@ while True:
       gutterCount = lines;
       gutter.innerHTML = Array.from({ length: lines }, (_, i) => '<div>' + (i + 1) + '</div>').join('');
     }
-    const runLine = running && match ? match.fighters[0].vm.line : 0;
+    const runLine = running && match && meIdx >= 0 ? match.fighters[meIdx].vm.line : 0;
     [...gutter.children].forEach((d, i) => {
       d.classList.toggle('running', i + 1 === runLine);
       d.classList.toggle('err', i + 1 === errorLine);
@@ -501,7 +536,7 @@ while True:
   function renderStatus() {
     const c = cursorInfo();
     let s = '<span>Ln ' + c.line + ', Col ' + c.col + '</span><span>' + (isPvp() ? CA.PVP.ops : opsPerTick()) + ' operações por turno</span>';
-    if (running && match) s += '<span>a executar a linha <b>' + match.fighters[0].vm.line + '</b></span>';
+    if (running && match && meIdx >= 0) s += '<span>a executar a linha <b>' + match.fighters[meIdx].vm.line + '</b></span>';
     $('status').innerHTML = s;
   }
 
@@ -514,8 +549,43 @@ while True:
     return { hp: maxHp, maxHp, energy: 100, act: '' };
   }
 
+  function renderBoard() {
+    const board = $('battleBoard');
+    board.textContent = '';
+    if (!battle || !match) return;
+    match.fighters.forEach((f, i) => {
+      const row = document.createElement('div');
+      row.className = 'row' + (f.out ? ' out' : '') + (i === meIdx ? ' me' : '');
+      row.style.setProperty('--c', colorOf(i));
+      const top = document.createElement('div');
+      top.className = 'top';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = colorOf(i);
+      const nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = f.name + (i === meIdx ? ' (tu)' : '');
+      const st = document.createElement('span');
+      st.className = 'st';
+      st.textContent = f.out ? (f.hp <= 0 ? 'KO' : 'parou') : match.tick > 0 ? ACTION_PT[f.last] || '' : '';
+      top.append(dot, nm, st);
+      const bar = document.createElement('div');
+      bar.className = 'bar hp';
+      const fill = document.createElement('i');
+      fill.style.width = (100 * Math.max(0, f.hp) / f.maxHp) + '%';
+      const label = document.createElement('span');
+      label.textContent = '';
+      bar.append(fill);
+      row.append(top, bar);
+      board.appendChild(row);
+    });
+  }
+
   function renderCards() {
-    for (let i = 0; i < 2; i++) {
+    $('battleBoard').hidden = !battle;
+    $('duelCards').hidden = !!battle;
+    if (battle) renderBoard();
+    for (let i = 0; i < 2 && !battle; i++) {
       const f = fighterInfo(i);
       $('hp' + i).style.width = (100 * f.hp / f.maxHp) + '%';
       $('hpt' + i).textContent = 'Vida ' + f.hp + ' / ' + f.maxHp;
@@ -532,11 +602,8 @@ while True:
 
   // ---------------------------------------------------------------- match flow
   function placeFighters() {
-    const start = levelStart();
-    vis.forEach((v, i) => {
-      v.x = v.tx = start[i][0]; v.y = v.ty = start[i][1];
-      v.facing = i === 0 ? 'East' : 'West'; v.lunge = 1; v.flash = 0; v.dead = 0;
-    });
+    const starts = match ? match.fighters.map((f) => [f.x, f.y, f.facing]) : levelStart().map((p, i) => [p[0], p[1], i === 0 ? 'East' : 'West']);
+    vis = starts.map(([x, y, facing]) => ({ x, y, tx: x, ty: y, facing, lunge: 1, flash: 0, dead: 0 }));
     popups = [];
     fireball = null;
   }
@@ -550,6 +617,8 @@ while True:
     }
     banner = { text: '', color: '#fff' };
     errorLine = 0;
+    battle = null;
+    meIdx = 0;
     match = isPvp()
       ? CA.makePvpMatch({ name: myFighterName(), script: code.value }, opponent)
       : CA.makeMatch(save.selected, {
@@ -593,10 +662,10 @@ while True:
     for (const e of match.consumeEvents()) {
       const who = e.fighter;
       switch (e.type) {
-        case 'print': log(who === 0 ? e.text : '[inimigo] ' + e.text, who === 0 ? 'print' : 'enemy'); break;
+        case 'print': if (who === meIdx) log(e.text, 'print'); else if (!battle) log('[inimigo] ' + e.text, 'enemy'); break;
         case 'error':
-          if (who === 0) { errorLine = e.line; log('Erro na linha ' + e.line + ': ' + e.text, 'error'); }
-          else log('O inimigo teve um erro na linha ' + e.line + ': ' + e.text, 'enemy');
+          if (who === meIdx) { errorLine = e.line; log('Erro na linha ' + e.line + ': ' + e.text, 'error'); }
+          else log((battle ? match.fighters[who].name : 'O inimigo') + ' teve um erro na linha ' + e.line + ': ' + e.text, 'enemy');
           popup(who, 'ERRO', COLORS.bad);
           break;
         case 'hit': vis[who].lunge = 0; vis[e.target].flash = 1; popup(e.target, '-' + e.amount, '#ff8a3d'); break;
@@ -609,17 +678,27 @@ while True:
           break;
         case 'charging': popup(who, e.text === 'charge' ? 'a carregar...' : 'a concentrar...', COLORS.warn); break;
         case 'tired': popup(who, 'cansado!', COLORS.warn); break;
-        case 'ended': if (who === 0) log('O teu programa terminou e o lutador ficou parado. Dica: usa while True: para repetir.', 'warn'); break;
+        case 'eliminated': if (battle) log(match.fighters[who].name + (e.text === 'knockout' ? ' foi eliminado (KO).' : ' saiu: o programa parou.'), who === meIdx ? 'error' : 'info'); break;
+        case 'ended': if (who === meIdx) log('O teu programa terminou e o lutador ficou parado. Dica: usa while True: para repetir.', 'warn'); break;
         case 'over': endMatch(e.target, e.text); break;
       }
     }
-    match.fighters.forEach((f, i) => { if (f.hp <= 0) vis[i].dead = Math.max(vis[i].dead, 0.01); });
+    match.fighters.forEach((f, i) => { if (f.hp <= 0 || f.out) vis[i].dead = Math.max(vis[i].dead, 0.01); });
   }
 
   function endMatch(winner, reason) {
     running = false;
     const lv = level();
     const why = REASON_PT[reason] || reason;
+    if (battle) {
+      const name = winner >= 0 ? match.fighters[winner].name : '';
+      if (winner < 0) banner = { text: 'EMPATE', color: COLORS.warn };
+      else if (winner === meIdx) banner = { text: 'GANHASTE!', color: COLORS.good };
+      else banner = { text: name + ' ganhou', color: colorOf(winner) };
+      log(winner >= 0 ? 'Vencedor da sala ' + battle.room + ': ' + name + ' (' + why + ', ' + match.tick + ' turnos).' : 'Empate na sala ' + battle.room + ' (' + why + ').', winner === meIdx ? 'good' : 'warn');
+      renderLevel();
+      return;
+    }
     if (isPvp()) {
       const outcome = winner === 0 ? ['VITÓRIA!', COLORS.good, 'good'] : winner === 1 ? ['DERROTA', COLORS.bad, 'error'] : ['EMPATE', COLORS.warn, 'warn'];
       banner = { text: outcome[0], color: outcome[1] };
@@ -652,6 +731,8 @@ while True:
     storeCode();
     save.selected = i;
     match = null;
+    battle = null;
+    meIdx = 0;
     banner = { text: '', color: '#fff' };
     errorLine = 0;
     code.value = save.code[i];
@@ -735,6 +816,8 @@ while True:
     storeCode();
     save.mode = mode;
     match = null;
+    battle = null;
+    meIdx = 0;
     banner = { text: '', color: '#fff' };
     errorLine = 0;
     code.value = isPvp() ? save.pvpCode : save.code[save.selected];
@@ -832,7 +915,7 @@ while True:
     if (!canWrite) { status.textContent = 'Só podes ver: pede ao dono do jogo acesso de Contributor para publicar.'; return; }
     if (!name) { status.textContent = 'Dá um nome ao teu lutador.'; $('fighterName').focus(); return; }
     if (code.value.length > CA.PVP.maxScript) { status.textContent = 'O código é demasiado grande (máximo 20 000 caracteres).'; return; }
-    const check = CA.makePvpMatch({ name, script: code.value }, { name: 'x', script: 'while True:\n    wait()\n' }).init();
+    const check = checkMyCode();
     if (check) {
       errorLine = check.line;
       renderGutter();
@@ -850,6 +933,217 @@ while True:
       else status.textContent = 'Não foi possível publicar (' + e.code + '). Tenta outra vez.';
     }
   });
+
+  function checkMyCode() {
+    return CA.makePvpMatch({ name: 'me', script: code.value }, { name: 'x', script: 'while True:\n    wait()\n' }).init();
+  }
+
+  // ---------------------------------------------------------------- lobby
+  // lobby/<viewer id> holds who is in which room with which fighter;
+  // battles/<room> holds the last battle started there (players' code
+  // snapshot + seed + start time). Live presence in the named room tells
+  // who has the page open right now. Every browser replays the battle from
+  // the same data, so everyone in the room sees the same fight.
+  let roomApi = null, lobbyRoom = null, lobbyName = '';
+  let lobbyDocs = [];
+  let onlineIds = null; // Set of ids with the room open, or null when presence is unavailable
+  let unsubLobby = null, unsubBattle = null, unsubPeers = null;
+  let lastBattle = null, lastStarted = 0, countdownTimer = null;
+  const pageLoaded = Date.now();
+  const STALE_MS = 3 * 60 * 60 * 1000;
+
+  const sanitizeRoom = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_.-]+/g, '-').replace(/^[^a-z0-9]+/, '').replace(/-+$/, '').slice(0, 40);
+
+  $('roomName').value = save.lobbyRoom || '';
+
+  const isOnline = (d) => onlineIds ? onlineIds.has(d.id) : Date.now() - d.joinedAt < STALE_MS;
+  const readyPlayers = () => lobbyDocs.filter(isOnline).sort((a, b) => a.joinedAt - b.joinedAt).slice(0, CA.BATTLE.maxPlayers);
+
+  async function renderLobby() {
+    const list = $('lobbyList');
+    const inRoom = !!lobbyName;
+    $('joinRoom').textContent = inRoom ? 'Atualizar o meu lutador' : 'Entrar com o meu lutador';
+    $('leaveRoom').hidden = !inRoom;
+    $('replayBattle').hidden = !lastBattle;
+    list.textContent = '';
+    if (!inRoom) {
+      $('startBattle').disabled = true;
+      $('lobbyStatus').textContent = db ? '' : 'A sala só funciona no link partilhado do jogo.';
+      return;
+    }
+    const ids = lobbyDocs.map((d) => d.id);
+    const profiles = users && ids.length ? await users.profiles(ids) : {};
+    list.textContent = '';
+    const sorted = lobbyDocs.slice().sort((a, b) => (isOnline(b) - isOnline(a)) || a.joinedAt - b.joinedAt);
+    sorted.forEach((d) => {
+      const row = document.createElement('div');
+      row.className = 'fighter' + (isOnline(d) ? '' : ' offline');
+      if (profiles[d.id]) { const img = document.createElement('img'); img.src = profiles[d.id].avatarUrl; img.alt = ''; row.appendChild(img); }
+      const who = document.createElement('div');
+      who.className = 'who';
+      const name = document.createElement('div');
+      name.className = 'fname';
+      name.textContent = d.name;
+      if (d.id === myId) { const tag = document.createElement('span'); tag.className = 'me'; tag.textContent = 'tu'; name.appendChild(tag); }
+      const meta = document.createElement('div');
+      meta.className = 'fmeta';
+      meta.textContent = ((profiles[d.id] && profiles[d.id].name) || 'Alguém') + ' · ' + (isOnline(d) ? 'na sala' : 'saiu da página');
+      who.append(name, meta);
+      row.appendChild(who);
+      list.appendChild(row);
+    });
+    const ready = readyPlayers();
+    $('startBattle').disabled = ready.length < 2 || (onlineIds !== null && !onlineIds.has(myId));
+    $('startBattle').textContent = ready.length >= 2 ? 'Começar combate (' + ready.length + ' lutadores)' : 'Começar combate';
+    $('lobbyStatus').textContent = ready.length < 2 ? 'À espera de pelo menos 2 lutadores na sala...' :
+      (lobbyDocs.filter(isOnline).length > CA.BATTLE.maxPlayers ? 'Só entram os primeiros 8.' : '');
+  }
+
+  function leaveLobbyListeners() {
+    [unsubLobby, unsubBattle, unsubPeers].forEach((u) => { if (u) u(); });
+    unsubLobby = unsubBattle = unsubPeers = null;
+    if (lobbyRoom) { lobbyRoom.leave().catch(() => {}); lobbyRoom = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    lobbyDocs = [];
+    onlineIds = null;
+    lastBattle = null;
+  }
+
+  $('joinRoom').addEventListener('click', async () => {
+    storeCode();
+    persist();
+    const status = $('lobbyStatus');
+    const name = $('fighterName').value.trim();
+    const room = sanitizeRoom($('roomName').value);
+    if (!db || !myId) { status.textContent = 'Abre o link partilhado do jogo (com sessão iniciada) para entrar numa sala.'; return; }
+    if (!canWrite) { status.textContent = 'Só podes ver: pede ao dono do jogo acesso de Contributor.'; return; }
+    if (!room) { status.textContent = 'Escreve o nome da sala (letras, números ou hífens).'; $('roomName').focus(); return; }
+    if (!name) { status.textContent = 'Dá um nome ao teu lutador (campo acima).'; $('fighterName').focus(); return; }
+    if (code.value.length > CA.PVP.maxScript) { status.textContent = 'O código é demasiado grande (máximo 20 000 caracteres).'; return; }
+    const check = checkMyCode();
+    if (check) {
+      errorLine = check.line;
+      renderGutter();
+      status.textContent = 'Corrige o erro na linha ' + check.line + ' antes de entrar.';
+      log('Erro de compilação na linha ' + check.line + ': ' + check.message, 'error');
+      return;
+    }
+    $('roomName').value = room;
+    save.lobbyRoom = room;
+    persist();
+    try {
+      await db.doc('lobby/' + myId).set({ room, name, script: code.value, joinedAt: Date.now() });
+    } catch (e) {
+      if (e.code === 'invalid_argument') { canWrite = false; status.textContent = 'Não tens permissão para entrar: pede acesso de Contributor ao dono do jogo.'; }
+      else status.textContent = 'Não foi possível entrar (' + e.code + '). Tenta outra vez.';
+      return;
+    }
+    if (room === lobbyName) { log('Atualizaste o teu lutador na sala ' + room + '.', 'good'); return; }
+    leaveLobbyListeners();
+    lobbyName = room;
+    log('Entraste na sala ' + room + ' com "' + name + '". Diz aos teus colegas para entrarem na mesma sala.', 'good');
+    unsubLobby = db.collection('lobby').where('room', '==', room).onSnapshot((snap) => {
+      lobbyDocs = snap.docs.map((d) => {
+        const v = d.data() || {};
+        return { id: d.id, name: String(v.name || 'Sem nome').slice(0, 24), script: String(v.script || '').slice(0, CA.PVP.maxScript), joinedAt: Number(v.joinedAt) || 0 };
+      });
+      renderLobby();
+    }, () => renderLobby());
+    unsubBattle = db.doc('battles/' + room).onSnapshot(handleBattle, () => {});
+    if (roomApi) {
+      try {
+        lobbyRoom = await roomApi.join(room);
+        lobbyRoom.presence({ id: myId }).catch(() => {});
+        unsubPeers = lobbyRoom.onPeers((change) => {
+          onlineIds = new Set(change.peers.map((p) => p.by || (p.presence && p.presence.id)).filter(Boolean));
+          renderLobby();
+        }, () => { onlineIds = null; renderLobby(); });
+      } catch (e) { lobbyRoom = null; onlineIds = null; }
+    }
+    renderLobby();
+  });
+
+  $('leaveRoom').addEventListener('click', async () => {
+    const room = lobbyName;
+    leaveLobbyListeners();
+    lobbyName = '';
+    renderLobby();
+    try { await db.doc('lobby/' + myId).delete(); } catch (e) { /* already gone */ }
+    log('Saíste da sala ' + room + '.', 'warn');
+  });
+
+  $('startBattle').addEventListener('click', async () => {
+    const players = readyPlayers();
+    if (players.length < 2) return;
+    $('startBattle').disabled = true;
+    const data = {
+      players: players.map((p) => ({ id: p.id, name: p.name, script: p.script })),
+      seed: (Math.random() * 0xffffffff) >>> 0 || 1,
+      startAt: Date.now() + 4000,
+      by: myId,
+    };
+    try { await db.doc('battles/' + lobbyName).set(data); }
+    catch (e) { $('lobbyStatus').textContent = 'Não foi possível começar (' + e.code + ').'; renderLobby(); }
+  });
+
+  $('replayBattle').addEventListener('click', () => { if (lastBattle) playBattle(lastBattle, lobbyName); });
+
+  function validBattle(d) {
+    return d && Array.isArray(d.players) && d.players.length >= 2 && d.players.length <= CA.BATTLE.maxPlayers &&
+      d.players.every((p) => p && typeof p.name === 'string' && typeof p.script === 'string');
+  }
+
+  function handleBattle(snap) {
+    if (!snap.exists) return;
+    const d = snap.data();
+    if (!validBattle(d)) return;
+    const room = lobbyName;
+    lastBattle = d;
+    renderLobby();
+    const startAt = Number(d.startAt) || 0;
+    // Only battles started after this page opened play automatically; older ones can be replayed.
+    if (startAt === lastStarted || startAt < pageLoaded - 10000) return;
+    lastStarted = startAt;
+    if (countdownTimer) clearInterval(countdownTimer);
+    if (running) { running = false; }
+    const names = d.players.map((p) => String(p.name).slice(0, 24)).join(', ');
+    log('Combate a começar na sala ' + room + ': ' + names, 'good');
+    const tickDown = () => {
+      const left = Math.ceil((startAt - Date.now()) / 1000);
+      if (left > 0) { banner = { text: 'Combate em ' + left + '...', color: COLORS.gold }; renderCards(); return; }
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+      playBattle(d, room);
+    };
+    countdownTimer = setInterval(tickDown, 200);
+    tickDown();
+  }
+
+  function playBattle(d, room) {
+    running = false;
+    const players = d.players.map((p) => ({ id: String(p.id || ''), name: String(p.name).slice(0, 24), script: String(p.script).slice(0, CA.PVP.maxScript) }));
+    // A fighter whose code does not compile just stands still (same on every browser).
+    let m = null;
+    for (let tries = 0; tries <= players.length; tries++) {
+      m = CA.makeBattle(players, Number(d.seed) || 1);
+      const err = m.init();
+      if (!err) break;
+      log('O código de ' + players[err.fighter].name + ' não compila (linha ' + err.line + '): fica parado.', 'warn');
+      players[err.fighter].script = 'while True:\n    wait()\n';
+    }
+    match = m;
+    battle = { room, width: m.config.width, height: m.config.height };
+    meIdx = players.findIndex((p) => p.id && p.id === myId);
+    banner = { text: '', color: '#fff' };
+    errorLine = 0;
+    placeFighters();
+    running = true;
+    accumulator = 0;
+    $('battleBoard').scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    log('--- Combate na sala ' + room + ' (' + players.length + ' lutadores)' + (meIdx < 0 ? ', estás a assistir' : '') + ' ---');
+    renderAll();
+  }
 
   // Round robin: every fighter against every other, twice (swapping sides).
   // Win 3 points, draw 1. Runs in small chunks so the page stays responsive.
@@ -904,14 +1198,15 @@ while True:
   });
 
   (async () => {
-    if (!window.claude || !window.claude.use) { renderFighters(); return; }
-    [db, users] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!window.claude || !window.claude.use) { renderFighters(); renderLobby(); return; }
+    [db, users, roomApi] = await Promise.all([window.claude.use('db'), window.claude.use('user'), window.claude.use('room')]);
     if (users) {
       myId = await users.id();
       const can = await users.can('data.write');
       if (can === false) canWrite = false;
     }
-    if (!db) { renderFighters(); return; }
+    if (!db) { renderFighters(); renderLobby(); return; }
+    renderLobby();
     db.collection('fighters').orderBy('updatedAt', 'desc').limit(200).onSnapshot((snap) => {
       published = snap.docs.map((d) => {
         const v = d.data() || {};
@@ -956,7 +1251,7 @@ while True:
     for (let x = 0; x < lv.width; x++) ctx.fillText(String(x), x * cell + cell * 0.06, (lv.height - 1) * cell + cell * 0.78);
     for (let y = 0; y < lv.height; y++) ctx.fillText(String(y), cell * 0.06, py(y) - cell * 0.44);
 
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < vis.length; i++) {
       const v = vis[i];
       v.x += (v.tx - v.x) * ease;
       v.y += (v.ty - v.y) * ease;
@@ -969,7 +1264,7 @@ while True:
       const cx = px(v.x) + Math.cos(yaw) * lungeOff;
       const cy = py(v.y) + Math.sin(yaw) * lungeOff;
       const r = cell * 0.3;
-      const base = i === 0 ? COLORS.player : COLORS.enemy;
+      const base = colorOf(i);
       const last = f ? f.last : 'idle';
       const t = performance.now() / 1000;
 

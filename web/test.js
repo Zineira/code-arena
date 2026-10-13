@@ -168,5 +168,34 @@ console.log('PvP tests');
   console.log('  advanced vs starter -> winner', r1.winner, 'tick', r1.tick, 'hp', r1.hp.join('/'));
 }
 
+console.log('Battle tests');
+{
+  const players = [
+    { name: 'Adv', script: ADVANCED }, { name: 'Start', script: STARTER },
+    { name: 'Turtle', script: CA.LEVELS[2].script }, { name: 'Champ', script: CA.LEVELS[5].script },
+    { name: 'Dummy', script: CA.LEVELS[0].script },
+  ];
+  const run = () => {
+    const m = CA.makeBattle(players, 4242);
+    expect(m.init() === null, 'battle compiles');
+    const out = [];
+    while (!m.over) {
+      m.step();
+      for (const e of m.consumeEvents()) if (e.type === 'eliminated') out.push(e.fighter + '@' + m.tick);
+      const cells = m.fighters.filter((f) => !f.out).map((f) => f.x + ',' + f.y);
+      expect(new Set(cells).size === cells.length, 'no two fighters share a cell (tick ' + m.tick + ')');
+    }
+    return { m, out };
+  };
+  const a = run(), b = run();
+  expect(a.m.winner === b.m.winner && a.out.join() === b.out.join(), 'battle is deterministic');
+  expect(a.m.winner >= 0 || a.m.tick === 300, 'battle ends with a winner or at the time limit');
+  console.log('  5-player battle -> winner', a.m.winner >= 0 ? players[a.m.winner].name : 'draw', 'at tick', a.m.tick, 'eliminated', a.out.join(' '));
+  const eight = CA.makeBattle(Array.from({ length: 8 }, (_, i) => ({ name: 'P' + i, script: CA.LEVELS[1].script })), 7);
+  expect(eight.init() === null, '8 players fit');
+  while (!eight.over) { eight.step(); eight.consumeEvents(); }
+  console.log('  8 brawlers -> winner', eight.winner, 'at tick', eight.tick);
+}
+
 console.log(failures ? '\n' + failures + ' FAILURE(S)' : '\nALL TESTS PASSED');
 process.exit(failures ? 1 : 0);

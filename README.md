@@ -29,6 +29,8 @@ A pasta `web/` tem uma versão que corre em qualquer browser, sem instalar nada:
 
 No separador **Multijogador** cada pessoa escreve um lutador e publica-o na arena partilhada; qualquer um pode **Desafiar** os lutadores publicados (e os 6 bots da campanha) ou correr um **Torneio** de todos contra todos com ranking. Aqui está tudo desbloqueado, com 250 operações por turno e 100 de vida para todos. Como o combate é determinístico, cada browser calcula o mesmo resultado a partir dos dois códigos, por isso não é preciso servidor de jogo: só a lista de lutadores é partilhada (base de dados da página publicada no claude.ai). Aberto como ficheiro local, o multijogador funciona só contra os bots.
 
+**Salas de combate (até 8 jogadores):** no Multijogador, combinem um nome de sala e entrem todos com o vosso lutador. A lista mostra quem está na sala em tempo real; quando estiverem prontos, qualquer um carrega em **Começar combate** e, após uma contagem de 3 segundos, todos veem a mesma batalha de todos contra todos numa arena 9×9. Nos scripts, `enemy_x()`, `distance()`, `dir_to_enemy()` e companhia referem-se ao adversário mais próximo ainda de pé, e `enemy_count()` diz quantos restam, por isso os códigos de 1 contra 1 funcionam sem mudanças.
+
 A versão Unreal (3D) está descrita a seguir.
 
 ## Requisitos
