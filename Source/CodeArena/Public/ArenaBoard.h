@@ -58,11 +58,11 @@ public:
 	float CameraPitch = -58.f;
 
 	UPROPERTY(EditAnywhere, Category = "Arena|Camera")
-	float CameraDistanceScale = 1.55f;
+	float CameraDistanceScale = 2.45f;
 
 	/** Shifts the arena to the right side of the screen so the code editor does not cover it. */
 	UPROPERTY(EditAnywhere, Category = "Arena|Camera")
-	float CameraSideOffsetScale = 0.6f;
+	float CameraSideOffsetScale = 0.42f;
 
 	UPROPERTY(EditAnywhere, Category = "Arena|Camera")
 	float CameraFOV = 55.f;

@@ -83,7 +83,7 @@ void AArenaFighter::SetName(const FString& InName)
 	DisplayName = InName;
 }
 
-void AArenaFighter::TeleportTo(const FVector& Location, float Yaw)
+void AArenaFighter::SnapTo(const FVector& Location, float Yaw)
 {
 	TargetLocation = Location;
 	TargetYaw = Yaw;
