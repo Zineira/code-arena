@@ -150,8 +150,8 @@ void AArenaBoard::SetupFighters(const FString& PlayerName, const FString& EnemyN
 	}
 	Fighters[0]->SetName(PlayerName);
 	Fighters[1]->SetName(EnemyName);
-	Fighters[0]->TeleportTo(GridToWorld(X0, Y0), DirToYaw(1));
-	Fighters[1]->TeleportTo(GridToWorld(X1, Y1), DirToYaw(3));
+	Fighters[0]->SnapTo(GridToWorld(X0, Y0), DirToYaw(1));
+	Fighters[1]->SnapTo(GridToWorld(X1, Y1), DirToYaw(3));
 	for (AArenaFighter* Fighter : Fighters)
 	{
 		Fighter->SetDefeated(false);

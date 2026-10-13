@@ -23,7 +23,7 @@ public:
 	void SetName(const FString& InName);
 
 	/** Snaps to a location/yaw (used when a match is (re)started). */
-	void TeleportTo(const FVector& Location, float Yaw);
+	void SnapTo(const FVector& Location, float Yaw);
 	/** Smoothly moves to a location/yaw. */
 	void MoveTo(const FVector& Location, float Yaw);
 
