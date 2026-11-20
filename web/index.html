@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixelVault</title>
+<style>
+@font-face { font-family: "PixelVault"; src: url("/pixel.ttf") format("truetype"); font-display: block; }
+:root {
+  --dirt: none; --btn: none; --stone: none;
+  --txt: #ffffff; --shadow: #3f3f3f; --gray: #a0a0a0; --dim: #808080;
+  --yellow: #ffff55; --red: #ff5555; --green: #55ff55;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #1b1b1b; overflow: hidden; }
+body {
+  font-family: "PixelVault", ui-monospace, monospace; font-size: 16px; line-height: 22px;
+  color: var(--txt); text-shadow: 2px 2px 0 var(--shadow);
+  -webkit-font-smoothing: none; font-smooth: never; user-select: none;
+}
+#pano { position: fixed; inset: 0; width: 100vw; height: 100vh; image-rendering: pixelated; display: none; }
+#shade { position: fixed; inset: 0; display: none; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.45) 100%), rgba(0,0,0,.12); }
+body.pano #pano, body.pano #shade { display: block; }
+body.dirt { background: linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)), var(--dirt) 0 0 / 64px; image-rendering: pixelated; }
+#app { position: fixed; inset: 0; display: flex; flex-direction: column; }
+
+/* ---------- texto ---------- */
+.gray { color: var(--gray); } .dim { color: var(--dim); } .yellow { color: var(--yellow); }
+.red { color: var(--red); } .green { color: var(--green); }
+.center { text-align: center; }
+
+/* ---------- título ---------- */
+.title-wrap { position: relative; margin: 0 auto; text-align: center; }
+.title { position: relative; font-size: 64px; line-height: 88px; letter-spacing: 0; white-space: nowrap; }
+.title .back { position: absolute; left: 0; top: 0; color: #2b2b2b; text-shadow: var(--extrude); }
+.title .face { position: relative; color: transparent; text-shadow: none;
+  background: var(--stone) 0 0 / 64px; -webkit-background-clip: text; background-clip: text; image-rendering: pixelated; }
+.edition { margin-top: -6px; color: #e8c46a; text-shadow: 2px 2px 0 #4a3510; letter-spacing: 6px; font-size: 16px; }
+.splash { position: absolute; right: -70px; bottom: 6px; color: var(--yellow); text-shadow: 2px 2px 0 #3f3f15;
+  white-space: nowrap; transform: rotate(-20deg); transform-origin: center; animation: pulse .5s ease-in-out infinite alternate; }
+@keyframes pulse { from { scale: 1; } to { scale: 1.08; } }
+@media (max-width: 640px) {
+  .title { font-size: 40px; line-height: 56px; }
+  .splash { right: -10px; bottom: -14px; font-size: 16px; }
+}
+
+/* ---------- botões ---------- */
+.btn {
+  font: inherit; color: var(--txt); text-shadow: 2px 2px 0 var(--shadow);
+  width: min(400px, calc(100vw - 32px)); height: 40px; padding: 0 8px; cursor: pointer;
+  border: 2px solid #000; border-radius: 0;
+  background: linear-gradient(rgba(255,255,255,.04), rgba(0,0,0,.08)), var(--btn) 0 0 / 32px #6f6f6f;
+  image-rendering: pixelated;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.32), inset -2px -4px 0 rgba(0,0,0,.38);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none;
+}
+.btn:hover, .btn:focus-visible { border-color: #fff; filter: brightness(1.12); }
+.btn:active { filter: brightness(.95); }
+.btn:disabled { color: var(--gray); text-shadow: none; cursor: default; filter: none; border-color: #000;
+  background: #2d2d2d; box-shadow: inset 2px 2px 0 rgba(255,255,255,.06), inset -2px -4px 0 rgba(0,0,0,.25); }
+.btn.w2 { width: min(196px, calc(50vw - 20px)); }
+.btn.w3 { width: min(224px, calc(33vw - 14px)); }
+.btn.w4 { width: min(148px, calc(25vw - 12px)); }
+.btn.w300 { width: min(300px, calc(50vw - 20px)); }
+.btn.sq { width: 40px; padding: 0; }
+.btn.sm { width: auto; padding: 0 12px; flex: none; }
+.rowb { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+/* ---------- campos ---------- */
+.field {
+  font: inherit; color: #e0e0e0; text-shadow: 2px 2px 0 #383838; background: #000;
+  border: 2px solid var(--gray); border-radius: 0; height: 40px; padding: 0 8px; width: 100%;
+  outline: none; caret-color: #e0e0e0; user-select: text;
+}
+.field:focus { border-color: #fff; }
+.field::placeholder { color: #555; text-shadow: none; }
+textarea.field { height: 96px; padding: 8px; resize: none; line-height: 22px; }
+label.lbl { color: var(--gray); margin: 12px 0 2px; display: block; }
+.inrow { display: flex; gap: 8px; }
+.inrow .field { flex: 1; min-width: 0; }
+
+/* ---------- ecrãs ---------- */
+.menu { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; }
+.menu .title-wrap { margin-bottom: 44px; }
+.foot { position: fixed; bottom: 4px; left: 6px; right: 6px; display: flex; justify-content: space-between; gap: 12px; pointer-events: none; }
+.hdr { flex: none; padding: 16px 12px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), var(--dirt) 0 0 / 64px; image-rendering: pixelated; }
+.ftr { flex: none; padding: 12px 12px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), var(--dirt) 0 0 / 64px; image-rendering: pixelated; }
+.lst { flex: 1; overflow-y: auto; padding: 4px 12px; background: rgba(0,0,0,.55);
+  box-shadow: inset 0 6px 6px -4px #000, inset 0 -6px 6px -4px #000; outline: none; }
+.lst::-webkit-scrollbar { width: 12px; } .lst::-webkit-scrollbar-track { background: #000; }
+.lst::-webkit-scrollbar-thumb { background: #808080; border: 2px solid #000; box-shadow: inset -2px -2px 0 #555; }
+.empty { text-align: center; color: var(--gray); margin-top: 40px; }
+
+.row { position: relative; width: min(610px, 100%); margin: 2px auto; height: 76px; padding: 4px; display: flex; gap: 8px;
+  border: 2px solid transparent; cursor: pointer; }
+.row:hover { background: rgba(255,255,255,.04); }
+.row.sel { border-color: var(--dim); background: #000; }
+.lst:focus-within .row.sel, .lst:focus .row.sel { border-color: #fff; }
+.ico { position: relative; width: 64px; height: 64px; flex: none; }
+.ico img { width: 64px; height: 64px; image-rendering: pixelated; display: block; }
+.mv { position: absolute; inset: 0; display: none; background: rgba(160,160,160,.45); }
+.row:hover .mv { display: block; }
+.mv b { position: absolute; left: 4px; width: 28px; height: 28px; background: #fff; cursor: pointer; filter: drop-shadow(2px 2px 0 #3f3f3f); }
+.mv b:hover { background: #ffff88; }
+.mv b.up { top: 4px; clip-path: polygon(50% 15%, 95% 75%, 5% 75%); }
+.mv b.dn { bottom: 4px; clip-path: polygon(5% 25%, 95% 25%, 50% 85%); }
+.txt { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.txt > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ping { flex: none; display: flex; align-items: flex-end; gap: 2px; height: 18px; margin: 2px 2px 0 0; align-self: flex-start; position: relative; }
+.ping i { width: 4px; background: #2f2f2f; box-shadow: 2px 0 0 #000; }
+.ping i:nth-child(1){height:4px} .ping i:nth-child(2){height:7px} .ping i:nth-child(3){height:10px}
+.ping i:nth-child(4){height:13px} .ping i:nth-child(5){height:16px}
+.ping i.on { background: #3fe13f; }
+.ping.wait i { animation: blink 1s steps(1) infinite; }
+.ping.wait i:nth-child(2){animation-delay:.2s} .ping.wait i:nth-child(3){animation-delay:.4s}
+.ping.wait i:nth-child(4){animation-delay:.6s} .ping.wait i:nth-child(5){animation-delay:.8s}
+@keyframes blink { 0% { background: #8a8a8a; } 50% { background: #2f2f2f; } }
+.ping.fail i { display: none; }
+.ping.fail::after { content: "×"; color: var(--red); font-size: 22px; line-height: 18px; }
+.ms { position: absolute; right: 12px; top: 26px; color: var(--gray); display: none; }
+.row:hover .ms { display: block; }
+
+.formwrap { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 8px 16px 24px; }
+.form { width: min(400px, 100%); }
+.msg { min-height: 22px; margin-top: 12px; text-align: center; }
+.panel { width: min(400px, calc(100vw - 32px)); }
+.big { font-size: 16px; }
+.meter { height: 6px; margin-top: 6px; background: #222; border: 0; }
+.meter > span { display: block; height: 100%; }
+
+/* ---------- toast ---------- */
+#toasts { position: fixed; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 10; pointer-events: none; }
+.toast { width: min(320px, calc(100vw - 16px)); padding: 8px 12px; background: #212121; border: 2px solid #000;
+  box-shadow: inset 0 0 0 2px #555, 4px 4px 0 rgba(0,0,0,.4); animation: tin .25s ease-out; }
+.toast.out { animation: tout .25s ease-in forwards; }
+.toast .t { color: var(--yellow); } .toast.err .t { color: var(--red); }
+@keyframes tin { from { transform: translateX(110%); } }
+@keyframes tout { to { transform: translateX(110%); } }
+.spin::after { content: ""; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+@media (prefers-reduced-motion: reduce) { .splash, .ping.wait i { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="pano"></canvas>
+<div id="shade"></div>
+<div id="app"></div>
+<div id="toasts" aria-live="polite"></div>
+<script>
+"use strict";
+/* ======================================================================
+   Utilitários
+   ====================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const app = $("#app");
+
+function hash(str) { let h = 2166136261; for (const ch of String(str)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+
+let TOKEN = "";
+(() => {
+  const m = location.hash.match(/t=([\w-]+)/);
+  if (m) { TOKEN = m[1]; history.replaceState(null, "", location.pathname); }
+  try { if (m) sessionStorage.setItem("pvt", TOKEN); else TOKEN = sessionStorage.getItem("pvt") || ""; } catch (e) {}
+})();
+
+const S = { settings: null, info: null, passwords: [], servers: [], selPw: null, selSrv: null, filter: "", back: null, screen: "" };
+
+class LockedError extends Error { constructor() { super("bloqueado"); this.locked = true; } }
+async function api(path, body) {
+  const opt = { method: body === undefined ? "GET" : "POST", headers: { "X-PV-Token": TOKEN } };
+  if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  let r;
+  try { r = await fetch(path, opt); } catch (e) { throw new Error("Sem ligação ao PixelVault. Ele ainda está a correr?"); }
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 423) { screenLock(); throw new LockedError(); }
+  if (!r.ok) throw new Error(j.error || ("Erro " + r.status));
+  return j;
+}
+function fail(e) { if (!e || e.locked) return; toast("Ups!", e.message || String(e), true); }
+
+/* ---------- som de clique ---------- */
+let actx = null;
+function click() {
+  if (S.settings && S.settings.sound === false) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain(), f = actx.createBiquadFilter();
+    o.type = "square"; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(140, t + .05);
+    f.type = "lowpass"; f.frequency.value = 2200;
+    g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0008, t + .07);
+    o.connect(f).connect(g).connect(actx.destination); o.start(t); o.stop(t + .08);
+  } catch (e) {}
+}
+
+/* ---------- toasts ---------- */
+function toast(title, text, err) {
+  const d = document.createElement("div");
+  d.className = "toast" + (err ? " err" : "");
+  d.innerHTML = `<div class="t">${esc(title)}</div><div>${esc(text)}</div>`;
+  $("#toasts").appendChild(d);
+  setTimeout(() => { d.classList.add("out"); setTimeout(() => d.remove(), 260); }, err ? 4500 : 2800);
+}
+
+/* ---------- área de transferência ---------- */
+let clipTimer = null;
+async function copy(text, what) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove();
+  }
+  const secs = S.settings ? S.settings.clipboard_clear_s : 30;
+  toast(what + " copiad" + (what.endsWith("e") || what.endsWith("a") ? "a" : "o") + "!", secs ? `Limpa daqui a ${secs} s.` : "Cola onde precisares.");
+  clearTimeout(clipTimer);
+  if (secs) clipTimer = setTimeout(() => { navigator.clipboard.writeText("").catch(() => {}); }, secs * 1000);
+}
+
+/* ======================================================================
+   Texturas (geradas, 16x16)
+   ====================================================================== */
+function makeTex(seed, px) {
+  const c = document.createElement("canvas"); c.width = c.height = 16;
+  const g = c.getContext("2d"), r = rng(seed);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { g.fillStyle = px(x, y, r); g.fillRect(x, y, 1, 1); }
+  return c;
+}
+const rgb = (c, k, a = 1) => `rgba(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0},${a})`;
+const speck = (r, lo = .82, hi = .2) => { const v = r(); return v < .1 ? lo - .12 : v > .93 ? 1 + hi : lo + r() * (1 + hi - lo) * .7; };
+const TEX = {};
+function buildTextures() {
+  TEX.dirt = makeTex(11, (x, y, r) => rgb([134, 96, 67], speck(r, .78, .18)));
+  TEX.stone = makeTex(23, (x, y, r) => rgb([126, 126, 126], speck(r, .82, .14)));
+  TEX.btn = makeTex(37, (x, y, r) => rgb([112, 112, 112], .92 + r() * .14));
+  const drip = Array.from({ length: 16 }, (_, i) => 3 + (hash("g" + i) % 3));
+  TEX.grass = makeTex(41, (x, y, r) => y < drip[x] ? rgb([93, 158, 52], .8 + r() * .35) : rgb([134, 96, 67], speck(r, .78, .18)));
+  TEX.leaves = makeTex(53, (x, y, r) => { const v = r(); return v < .14 ? "rgba(20,50,12,1)" : rgb([64, 128, 40], .65 + r() * .55); });
+  TEX.log = makeTex(67, (x, y, r) => rgb([104, 82, 50], (x % 4 === 0 ? .7 : .95) + r() * .15));
+  TEX.sand = makeTex(71, (x, y, r) => rgb([219, 207, 160], .9 + r() * .12));
+  TEX.water = makeTex(83, (x, y, r) => rgb([52, 92, 205], .8 + r() * .25, .82));
+  TEX.ore = makeTex(97, (x, y, r) => { const ore = ((x + 3 * y) % 7 === 0 && r() < .7) || (hash(x * 31 + y) % 13 === 0); return ore ? rgb([40, 40, 40], .8 + r() * .5) : rgb([126, 126, 126], speck(r, .82, .14)); });
+  const css = document.documentElement.style;
+  css.setProperty("--dirt", `url(${TEX.dirt.toDataURL()})`);
+  css.setProperty("--btn", `url(${TEX.btn.toDataURL()})`);
+  css.setProperty("--stone", `url(${TEX.stone.toDataURL()})`);
+  let ex = [];
+  for (let i = 1; i <= 6; i++) ex.push(`${i}px ${i}px 0 ${i < 6 ? "#3a3a3a" : "#1c1c1c"}`);
+  css.setProperty("--extrude", ex.join(","));
+}
+
+/* ======================================================================
+   Panorama: paisagem de blocos gerada e a deslizar devagar
+   ====================================================================== */
+const Pano = {
+  cv: $("#pano"), ctx: null, x: 0, last: 0, on: false, raf: 0,
+  start() {
+    if (this.on) return; this.on = true; document.body.classList.add("pano"); document.body.classList.remove("dirt");
+    this.ctx = this.cv.getContext("2d"); this.resize(); this.last = performance.now();
+    const loop = t => { if (!this.on) return; const dt = Math.min(.1, (t - this.last) / 1000); this.last = t; this.x += dt * 5; this.draw(); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+  },
+  stop() { this.on = false; cancelAnimationFrame(this.raf); document.body.classList.remove("pano"); document.body.classList.add("dirt"); },
+  resize() { this.cv.width = Math.ceil(innerWidth / 2); this.cv.height = Math.ceil(innerHeight / 2); },
+  ground(c) { return Math.round(10 + 3.2 * Math.sin(c * .061) + 2.2 * Math.sin(c * .023 + 1.7) + 1.2 * Math.sin(c * .17 + .4)); },
+  tree(c) { const g = this.ground(c); return g > 9 && hash("t" + c) % 9 === 0 && hash("t" + (c - 1)) % 9 !== 0 && hash("t" + (c - 2)) % 9 !== 0; },
+  draw() {
+    const g = this.ctx, W = this.cv.width, H = this.cv.height, B = 16, SEA = 9;
+    g.imageSmoothingEnabled = false;
+    const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#5f8fea"); sky.addColorStop(1, "#bcd5ff");
+    g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    // sol
+    g.fillStyle = "#fff9d0"; g.fillRect((W * .78 | 0), (H * .12 | 0), 28, 28);
+    // nuvens (mais lentas que o chão)
+    const cx = this.x * .5; g.fillStyle = "rgba(255,255,255,.85)";
+    for (let k = Math.floor(cx / 120) - 1; k < Math.floor((cx + W) / 120) + 2; k++) {
+      const h = hash("c" + k); if (h % 3 === 0) continue;
+      const w = 32 + (h % 5) * 12, y = 12 + (h >> 4) % 40;
+      g.fillRect(Math.floor(k * 120 - cx), y, w, 8); g.fillRect(Math.floor(k * 120 - cx + 8), y - 6, w - 24, 6);
+    }
+    const ox = Math.floor(this.x), c0 = Math.floor(ox / B) - 3, cols = Math.ceil(W / B) + 6;
+    const rowsUp = Math.ceil(H / B);
+    for (let c = c0; c < c0 + cols; c++) {
+      const sx = c * B - ox, gr = this.ground(c);
+      for (let r = 0; r < Math.min(gr, rowsUp + 1); r++) {
+        let t;
+        if (r === gr - 1) t = gr <= SEA + 1 ? TEX.sand : TEX.grass;
+        else if (r >= gr - 4) t = gr <= SEA + 1 ? TEX.sand : TEX.dirt;
+        else t = hash(c * 977 + r) % 23 === 0 ? TEX.ore : TEX.stone;
+        g.drawImage(t, sx, H - (r + 1) * B);
+      }
+      for (let r = gr; r < SEA; r++) g.drawImage(TEX.water, sx, H - (r + 1) * B);
+    }
+    // árvores
+    for (let c = c0; c < c0 + cols; c++) {
+      if (!this.tree(c)) continue;
+      const gr = this.ground(c), sx = c * B - ox;
+      for (let k = 0; k < 4; k++) g.drawImage(TEX.log, sx, H - (gr + k + 1) * B);
+      const leaf = (dc, r) => g.drawImage(TEX.leaves, sx + dc * B, H - (r + 1) * B);
+      for (let dc = -2; dc <= 2; dc++) { leaf(dc, gr + 3); if (dc) leaf(dc, gr + 2); }
+      for (let dc = -1; dc <= 1; dc++) { leaf(dc, gr + 4); if (!dc) leaf(dc, gr + 5); }
+      leaf(-1, gr + 5); leaf(1, gr + 5);
+    }
+    // sombreado leve por profundidade
+    const dk = g.createLinearGradient(0, H * .55, 0, H); dk.addColorStop(0, "rgba(0,0,0,0)"); dk.addColorStop(1, "rgba(0,0,0,.35)");
+    g.fillStyle = dk; g.fillRect(0, 0, W, H);
+  },
+};
+addEventListener("resize", () => { if (Pano.on) Pano.resize(); });
+
+/* ======================================================================
+   Ícones (8x8 gerados a partir do nome)
+   ====================================================================== */
+const iconCache = new Map();
+function identicon(seed, kind) {
+  const key = kind + ":" + seed;
+  if (iconCache.has(key)) return iconCache.get(key);
+  const c = document.createElement("canvas"); c.width = c.height = 8;
+  const g = c.getContext("2d"), h = hash(seed), r = rng(h), hue = h % 360;
+  g.fillStyle = `hsl(${hue},35%,18%)`; g.fillRect(0, 0, 8, 8);
+  if (kind === "key") {
+    const pat = ["..####..", ".#....#.", ".#....#.", "..####..", "...##...", "...###..", "...##...", "...###.."];
+    pat.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "#") { g.fillStyle = `hsl(${hue},70%,${55 + (x + y) % 2 * 8}%)`; g.fillRect(x, y, 1, 1); } }));
+  } else {
+    for (let y = 1; y < 7; y++) for (let x = 1; x < 4; x++) if (r() < .55) {
+      g.fillStyle = `hsl(${(hue + (r() < .3 ? 40 : 0)) % 360},65%,${45 + r() * 25 | 0}%)`;
+      g.fillRect(x, y, 1, 1); g.fillRect(7 - x, y, 1, 1);
+    }
+    g.fillStyle = `hsl(${hue},60%,70%)`; g.fillRect(3, 3, 2, 2);
+  }
+  const url = c.toDataURL(); iconCache.set(key, url); return url;
+}
+
+/* ======================================================================
+   Gestão de ecrãs
+   ====================================================================== */
+function show(name, html, { pano = false, back = null, acts = {} } = {}) {
+  S.screen = name; S.back = back;
+  app.innerHTML = html;
+  pano ? Pano.start() : Pano.stop();
+  $$("[data-act]", app).forEach(el => el.addEventListener("click", ev => {
+    if (el.disabled) return; click(); const fn = acts[el.dataset.act]; if (fn) fn(ev, el);
+  }));
+  const af = $("[autofocus]", app); if (af) setTimeout(() => af.focus(), 30);
+}
+addEventListener("keydown", ev => {
+  if (ev.key === "Escape" && S.back) { ev.preventDefault(); click(); S.back(); }
+});
+function onEnter(sel, fn) { $$(sel, app).forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && i.tagName !== "TEXTAREA") { e.preventDefault(); click(); fn(); } })); }
+
+const SPLASHES = [
+  "Agora com AES-256-GCM!", "100% local!", "Sem nuvem!", "127.0.0.1, doce lar!", "scrypt é amigo!",
+  "Não partilhes a mestra!", "SSH > Telnet!", "Também experimenta Code Arena!", "Ctrl+C para sair!",
+  "Palavras-passe longas!", "Bloqueia antes do café!", "Feito com blocos!", "ssh -p 22!", "Agora com cedilha!",
+];
+function titleHtml(splash = true) {
+  const s = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+  return `<div class="title-wrap"><div class="title"><span class="back" aria-hidden="true">PIXELVAULT</span><span class="face">PIXELVAULT</span></div>
+    <div class="edition">COFRE LOCAL</div>${splash ? `<div class="splash">${esc(s)}</div>` : ""}</div>`;
+}
+const footer = () => `<div class="foot"><span>PixelVault ${esc(S.info?.version || "")}</span><span class="gray">Nada sai da tua máquina.</span></div>`;
+
+/* ---------- bloqueio / criação ---------- */
+async function screenLock() {
+  S.settings = null;
+  let st; try { st = await api("/api/state"); } catch (e) { return screenFatal(e.message); }
+  S.info = st;
+  const creating = !st.exists;
+  show("lock", `<div class="menu">${titleHtml(false)}
+    <div class="panel">
+      ${creating ? `<div class="center">Bem-vindo! Cria o teu cofre.</div>
+        <div class="center gray" style="margin-top:6px">A palavra-passe mestra cifra tudo e não pode ser recuperada.</div>
+        <label class="lbl">Palavra-passe mestra</label><input class="field" id="m1" type="password" autocomplete="new-password" autofocus>
+        <label class="lbl">Repetir</label><input class="field" id="m2" type="password" autocomplete="new-password">`
+      : `<div class="center">O cofre está bloqueado.</div>
+        <label class="lbl">Palavra-passe mestra</label><input class="field" id="m1" type="password" autocomplete="current-password" autofocus>`}
+      <div class="msg red" id="msg"></div>
+      <div class="col" style="margin-top:8px"><button class="btn" data-act="go">${creating ? "Criar Cofre" : "Desbloquear"}</button></div>
+    </div></div>${footer()}`, { pano: true, acts: { go } });
+  onEnter(".field", go);
+  async function go() {
+    const m1 = $("#m1").value, msg = $("#msg");
+    if (creating && m1 !== $("#m2").value) { msg.textContent = "As palavras-passe não coincidem."; return; }
+    msg.innerHTML = `<span class="gray spin">${creating ? "A criar" : "A abrir"}</span>`;
+    $$(".btn", app).forEach(b => b.disabled = true);
+    try {
+      await api(creating ? "/api/setup" : "/api/unlock", { master: m1 });
+      await refreshState(); screenMain();
+    } catch (e) { msg.textContent = e.message; $$(".btn", app).forEach(b => b.disabled = false); $("#m1").select(); }
+  }
+}
+async function refreshState() { const st = await api("/api/state"); S.info = st; S.settings = st.settings || S.settings; return st; }
+function screenFatal(text) {
+  show("fatal", `<div class="menu">${titleHtml(false)}<div class="center red panel">${esc(text)}</div>
+    <div class="center gray panel">Corre <span class="yellow">python pixelvault.py</span> e abre o link que aparece.</div></div>`, { pano: true });
+}
+
+/* ---------- menu principal ---------- */
+function screenMain() {
+  show("main", `<div class="menu">${titleHtml()}
+    <button class="btn" data-act="single" autofocus>Um Jogador</button>
+    <button class="btn" data-act="multi">Multijogador</button>
+    <button class="btn" data-act="lock">Bloquear Cofre</button>
+    <div class="rowb" style="margin-top:16px"><button class="btn w2" data-act="opts">Opções...</button><button class="btn w2" data-act="quit">Sair</button></div>
+  </div>${footer()}`, {
+    pano: true,
+    acts: {
+      single: screenSingle, multi: screenMulti, opts: screenOptions,
+      lock: async () => { try { await api("/api/lock", {}); } catch (e) {} screenLock(); },
+      quit: async () => {
+        try { await api("/api/quit", {}); } catch (e) {}
+        show("bye", `<div class="menu">${titleHtml(false)}<div class="center">O PixelVault foi fechado e o cofre bloqueado.</div><div class="center gray">Podes fechar esta janela.</div></div>`, { pano: true });
+      },
+    },
+  });
+}
+
+/* ======================================================================
+   UM JOGADOR: palavras-passe
+   ====================================================================== */
+async function screenSingle() {
+  try { S.passwords = (await api("/api/passwords")).items; } catch (e) { return fail(e); }
+  show("single", `
+    <div class="hdr"><div>Selecionar Palavra-passe</div>
+      <input class="field" id="q" placeholder="Procurar..." style="width:min(400px,100%)" value="${esc(S.filter)}" autofocus></div>
+    <div class="lst" id="lst" tabindex="0"></div>
+    <div class="ftr">
+      <div class="rowb"><button class="btn w300" data-act="copy" data-need>Copiar Palavra-passe</button><button class="btn w300" data-act="new">Criar Nova</button></div>
+      <div class="rowb"><button class="btn w4" data-act="edit" data-need>Editar</button><button class="btn w4" data-act="del" data-need>Apagar</button>
+        <button class="btn w4" data-act="reveal" data-need>Mostrar</button><button class="btn w4" data-act="back">Cancelar</button></div>
+    </div>`, {
+    back: screenMain,
+    acts: {
+      back: screenMain, new: () => screenPwEdit(null),
+      copy: () => copyPw(S.selPw),
+      edit: () => screenPwEdit(S.passwords.find(p => p.id === S.selPw)),
+      del: () => { const p = S.passwords.find(p => p.id === S.selPw); confirmDelete("esta palavra-passe", p.name, async () => { await api("/api/passwords/delete", { id: p.id }); S.selPw = null; }, screenSingle); },
+      reveal: revealPw,
+    },
+  });
+  $("#q").addEventListener("input", e => { S.filter = e.target.value; renderPw(); });
+  renderPw();
+  listKeys($("#lst"), () => visiblePw().map(p => p.id), id => { S.selPw = id; renderPw(); }, () => copyPw(S.selPw));
+}
+function visiblePw() {
+  const q = S.filter.trim().toLowerCase();
+  const arr = [...S.passwords].sort((a, b) => a.name.localeCompare(b.name, "pt"));
+  return q ? arr.filter(p => (p.name + " " + p.username + " " + p.url).toLowerCase().includes(q)) : arr;
+}
+function renderPw() {
+  const lst = $("#lst"), arr = visiblePw();
+  if (!arr.some(p => p.id === S.selPw)) S.selPw = null;
+  lst.innerHTML = arr.length ? arr.map(p => `
+    <div class="row ${p.id === S.selPw ? "sel" : ""}" data-id="${esc(p.id)}">
+      <div class="ico"><img src="${identicon(p.name, "key")}" alt=""></div>
+      <div class="txt"><div>${esc(p.name)}</div>
+        <div class="gray">${esc(p.username || "(sem utilizador)")}${p.url ? " · " + esc(p.url) : ""}</div>
+        <div class="dim pw" data-pw="${esc(p.id)}">${p.has_password ? "••••••••••" : "(sem palavra-passe)"} · ${new Date(p.updated * 1000).toLocaleDateString("pt-PT")}</div></div>
+    </div>`).join("")
+    : `<div class="empty">${S.passwords.length ? "Nada encontrado." : "Ainda não tens palavras-passe.<br>Carrega em «Criar Nova»."}</div>`;
+  $$(".row", lst).forEach(r => {
+    r.addEventListener("click", () => { S.selPw = r.dataset.id; renderPw(); lst.focus(); });
+    r.addEventListener("dblclick", () => { click(); copyPw(r.dataset.id); });
+  });
+  $$("[data-need]", app).forEach(b => b.disabled = !S.selPw);
+}
+async function copyPw(id) {
+  if (!id) return;
+  try { const r = await api("/api/passwords/reveal", { id }); copy(r.password, "Palavra-passe"); } catch (e) { fail(e); }
+}
+async function revealPw() {
+  const id = S.selPw; if (!id) return;
+  try {
+    const r = await api("/api/passwords/reveal", { id });
+    const el = $(`[data-pw="${CSS.escape(id)}"]`); if (!el) return;
+    el.textContent = r.password || "(vazia)"; el.classList.remove("dim"); el.classList.add("yellow"); el.style.userSelect = "text";
+    setTimeout(() => { if (S.screen === "single") renderPw(); }, 10000);
+  } catch (e) { fail(e); }
+}
+
+/* gerador */
+const GEN = { len: 20, sym: true };
+function generate() {
+  let set = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  if (GEN.sym) set += "!@#$%&*-_=+?";
+  const out = [], buf = new Uint32Array(1), lim = Math.floor(4294967296 / set.length) * set.length;
+  while (out.length < GEN.len) { crypto.getRandomValues(buf); if (buf[0] < lim) out.push(set[buf[0] % set.length]); }
+  return out.join("");
+}
+function strength(pw) {
+  let n = 0; if (/[a-z]/.test(pw)) n += 26; if (/[A-Z]/.test(pw)) n += 26; if (/\d/.test(pw)) n += 10; if (/[^a-zA-Z\d]/.test(pw)) n += 20;
+  const bits = pw.length * Math.log2(n || 1);
+  if (!pw) return ["", 0, "#222"];
+  if (bits < 40) return ["Fraca", bits, "#ff5555"];
+  if (bits < 60) return ["Razoável", bits, "#ffaa00"];
+  if (bits < 90) return ["Forte", bits, "#55ff55"];
+  return ["Muito forte", bits, "#55ffff"];
+}
+
+async function screenPwEdit(p) {
+  let current = "";
+  if (p) { try { current = (await api("/api/passwords/reveal", { id: p.id })).password; } catch (e) { return fail(e); } }
+  show("pwedit", `
+    <div class="hdr"><div>${p ? "Editar Entrada" : "Criar Nova Entrada"}</div></div>
+    <div class="formwrap"><div class="form">
+      <label class="lbl">Nome</label><input class="field" id="f-name" maxlength="100" value="${esc(p?.name)}" placeholder="Ex.: Email do trabalho" autofocus>
+      <label class="lbl">Utilizador</label>
+      <div class="inrow"><input class="field" id="f-user" value="${esc(p?.username)}" autocomplete="off"><button class="btn sm" data-act="cuser">Copiar</button></div>
+      <label class="lbl">Palavra-passe</label>
+      <div class="inrow"><input class="field" id="f-pw" type="password" autocomplete="new-password" value="${esc(current)}"><button class="btn sm" data-act="eye" id="eye">Mostrar</button></div>
+      <div class="meter"><span id="meter"></span></div><div class="gray" id="str" style="margin-top:4px">&nbsp;</div>
+      <div class="inrow" style="margin-top:8px"><button class="btn" style="flex:1" data-act="gen">Gerar</button>
+        <button class="btn sm" data-act="len" id="len">Tamanho: ${GEN.len}</button><button class="btn sm" data-act="sym" id="sym">Símbolos: ${GEN.sym ? "Sim" : "Não"}</button></div>
+      <label class="lbl">Site ou endereço</label><input class="field" id="f-url" value="${esc(p?.url)}" placeholder="https://...">
+      <label class="lbl">Notas</label><textarea class="field" id="f-notes">${esc(p?.notes)}</textarea>
+      <div class="msg red" id="msg"></div>
+    </div></div>
+    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="save">Guardar</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
+    back: screenSingle,
+    acts: {
+      back: screenSingle, save,
+      cuser: () => { const u = $("#f-user").value; if (u) copy(u, "Utilizador"); },
+      eye: () => { const f = $("#f-pw"); const vis = f.type === "password"; f.type = vis ? "text" : "password"; $("#eye").textContent = vis ? "Esconder" : "Mostrar"; },
+      gen: () => { const f = $("#f-pw"); f.value = generate(); f.type = "text"; $("#eye").textContent = "Esconder"; meter(); },
+      len: () => { const L = [12, 16, 20, 24, 32, 40]; GEN.len = L[(L.indexOf(GEN.len) + 1) % L.length]; $("#len").textContent = "Tamanho: " + GEN.len; },
+      sym: () => { GEN.sym = !GEN.sym; $("#sym").textContent = "Símbolos: " + (GEN.sym ? "Sim" : "Não"); },
+    },
+  });
+  const meter = () => { const [t, bits, col] = strength($("#f-pw").value); $("#meter").style.cssText = `width:${Math.min(100, bits / 1.2)}%;background:${col}`; $("#str").innerHTML = t ? `Força: <span style="color:${col}">${t}</span> (${bits | 0} bits)` : "&nbsp;"; };
+  $("#f-pw").addEventListener("input", meter); meter();
+  onEnter("input.field", save);
+  async function save() {
+    const body = { id: p?.id, name: $("#f-name").value, username: $("#f-user").value, password: $("#f-pw").value, url: $("#f-url").value, notes: $("#f-notes").value };
+    if (!body.name.trim()) { $("#msg").textContent = "Dá um nome à entrada."; return; }
+    try { const r = await api("/api/passwords", body); S.selPw = r.item.id; toast("Guardado!", body.name); screenSingle(); }
+    catch (e) { if (!e.locked) $("#msg").textContent = e.message; }
+  }
+}
+
+/* ======================================================================
+   MULTIJOGADOR: servidores SSH
+   ====================================================================== */
+const PING = {};
+async function screenMulti(repinging = true) {
+  try { S.servers = (await api("/api/servers")).items; } catch (e) { return fail(e); }
+  show("multi", `
+    <div class="hdr"><div>Jogar em Multijogador</div></div>
+    <div class="lst" id="lst" tabindex="0"></div>
+    <div class="ftr">
+      <div class="rowb"><button class="btn w3" data-act="join" data-need>Entrar no Servidor</button><button class="btn w3" data-act="direct">Ligação Direta</button><button class="btn w3" data-act="add">Adicionar Servidor</button></div>
+      <div class="rowb"><button class="btn w4" data-act="edit" data-need>Editar</button><button class="btn w4" data-act="del" data-need>Apagar</button>
+        <button class="btn w4" data-act="refresh">Atualizar</button><button class="btn w4" data-act="back">Cancelar</button></div>
+    </div>`, {
+    back: screenMain,
+    acts: {
+      back: screenMain, add: () => screenSrvEdit(null), direct: screenDirect,
+      join: () => join(S.selSrv),
+      edit: () => screenSrvEdit(S.servers.find(s => s.id === S.selSrv)),
+      del: () => { const s = S.servers.find(s => s.id === S.selSrv); confirmDelete("este servidor", s.name, async () => { await api("/api/servers/delete", { id: s.id }); S.selSrv = null; }, screenMulti); },
+      refresh: () => { for (const k in PING) delete PING[k]; screenMulti(); },
+    },
+  });
+  if (!S.info?.ssh && !S.sshWarned) (S.sshWarned = true, toast("Falta o ssh", "Não encontrei o cliente OpenSSH neste computador.", true));
+  renderSrv();
+  $("#lst").focus();
+  listKeys($("#lst"), () => S.servers.map(s => s.id), id => { S.selSrv = id; renderSrv(); }, () => join(S.selSrv));
+  if (repinging) S.servers.forEach(s => { if (!PING[s.id]) pingSrv(s.id); });
+}
+function srvAddr(s) { const h = s.host.includes(":") ? `[${s.host}]` : s.host; return (s.username ? s.username + "@" : "") + h + (s.port && s.port !== 22 ? ":" + s.port : ""); }
+const AUTH_LABEL = { password: "palavra-passe guardada", key: "chave SSH", agent: "agente / pedir no terminal" };
+function renderSrv() {
+  const lst = $("#lst"); if (!lst) return;
+  if (!S.servers.some(s => s.id === S.selSrv)) S.selSrv = null;
+  lst.innerHTML = S.servers.length ? S.servers.map((s, i) => {
+    const p = PING[s.id];
+    let l2, bars = 0, cls = "wait", ms = "";
+    if (!p || p.pending) l2 = `<span class="dim spin">A comunicar</span>`;
+    else if (!p.ok) { l2 = `<span style="color:#aa0000">Não foi possível ligar: ${esc(p.error)}</span>`; cls = "fail"; }
+    else { l2 = `<span class="dim">${esc(p.banner || "Porta aberta")}</span>`; cls = ""; ms = p.ms + " ms"; bars = p.ms < 80 ? 5 : p.ms < 150 ? 4 : p.ms < 300 ? 3 : p.ms < 600 ? 2 : 1; }
+    const auth = s.auth === "password" && !s.has_password ? "pede palavra-passe" : AUTH_LABEL[s.auth] || "";
+    return `<div class="row ${s.id === S.selSrv ? "sel" : ""}" data-id="${esc(s.id)}">
+      <div class="ico"><img src="${identicon(s.host + s.name, "srv")}" alt="">
+        <div class="mv">${i > 0 ? `<b class="up" data-mv="up" title="Subir"></b>` : ""}${i < S.servers.length - 1 ? `<b class="dn" data-mv="down" title="Descer"></b>` : ""}</div></div>
+      <div class="txt"><div>${esc(s.name)}</div><div>${l2}</div><div class="gray">${esc(srvAddr(s))} <span class="dim">· ${esc(auth)}</span></div></div>
+      <div class="ping ${cls}" title="${esc(ms)}">${[1, 2, 3, 4, 5].map(k => `<i class="${k <= bars ? "on" : ""}"></i>`).join("")}</div>
+      ${ms ? `<div class="ms">${ms}</div>` : ""}
+    </div>`;
+  }).join("") : `<div class="empty">Ainda não tens servidores.<br>Carrega em «Adicionar Servidor».</div>`;
+  $$(".row", lst).forEach(r => {
+    r.addEventListener("click", ev => {
+      const mv = ev.target.closest("[data-mv]");
+      if (mv) { ev.stopPropagation(); click(); moveSrv(r.dataset.id, mv.dataset.mv); return; }
+      S.selSrv = r.dataset.id; renderSrv(); lst.focus();
+    });
+    r.addEventListener("dblclick", ev => { if (!ev.target.closest("[data-mv]")) { click(); join(r.dataset.id); } });
+  });
+  $$("[data-need]", app).forEach(b => b.disabled = !S.selSrv);
+}
+async function pingSrv(id) {
+  PING[id] = { pending: true }; renderSrv();
+  try { PING[id] = await api("/api/servers/ping", { id }); } catch (e) { PING[id] = { ok: false, error: e.locked ? "bloqueado" : e.message }; }
+  if (S.screen === "multi") renderSrv();
+}
+async function moveSrv(id, dir) {
+  try { await api("/api/servers/move", { id, dir }); S.selSrv = id; S.servers = (await api("/api/servers")).items; renderSrv(); } catch (e) { fail(e); }
+}
+async function join(id) {
+  const s = S.servers.find(x => x.id === id); if (!s) return;
+  connecting(s.name, () => api("/api/servers/connect", { id }), s.auth === "password" && s.has_password);
+}
+function connecting(name, fn, autofill) {
+  show("conn", `<div class="menu"><div class="spin" id="st">A ligar ao servidor</div><div class="gray center panel" id="sub">${esc(name)}</div>
+    <div style="margin-top:24px"><button class="btn" data-act="back" id="bk">Cancelar</button></div></div>`, { back: () => screenMulti(false), acts: { back: () => screenMulti(false) } });
+  fn().then(() => {
+    $("#st").classList.remove("spin"); $("#st").textContent = "Terminal aberto!";
+    $("#sub").innerHTML = `A sessão SSH com <span class="yellow">${esc(name)}</span> abriu numa janela nova.` +
+      (autofill ? `<br><br>A palavra-passe é entregue diretamente ao ssh (uso único).` : "") +
+      `<br><br>Se for a primeira vez, confirma a impressão digital do servidor no terminal.`;
+    $("#bk").textContent = "Voltar à Lista de Servidores";
+  }).catch(e => {
+    if (e.locked) return;
+    $("#st").classList.remove("spin"); $("#st").textContent = "Falha na ligação ao servidor";
+    $("#sub").innerHTML = `<span class="red">${esc(e.message)}</span>`;
+    $("#bk").textContent = "Voltar à Lista de Servidores";
+  });
+}
+
+function parseAddr(a) {
+  a = a.trim(); let host = a, port = null, user = "";
+  const at = a.lastIndexOf("@"); if (at > 0) { user = a.slice(0, at); a = a.slice(at + 1); host = a; }
+  let m = a.match(/^\[([^\]]+)\](?::(\d+))?$/);
+  if (m) { host = m[1]; port = m[2]; }
+  else if ((m = a.match(/^([^:]+):(\d+)$/))) { host = m[1]; port = m[2]; }
+  return { host, port: port ? +port : 22, user };
+}
+
+function screenSrvEdit(s) {
+  const st = { auth: s?.auth || "password" };
+  const addr = s ? (s.host.includes(":") ? `[${s.host}]` : s.host) + (s.port !== 22 ? ":" + s.port : "") : "";
+  show("srvedit", `
+    <div class="hdr"><div>Editar Informação do Servidor</div></div>
+    <div class="formwrap"><div class="form">
+      <label class="lbl">Nome do Servidor</label><input class="field" id="f-name" maxlength="100" value="${esc(s?.name ?? "Servidor")}" autofocus>
+      <label class="lbl">Endereço do Servidor</label><input class="field" id="f-addr" value="${esc(addr)}" placeholder="exemplo.pt ou 10.0.0.5:2222" autocomplete="off">
+      <label class="lbl">Utilizador</label><input class="field" id="f-user" value="${esc(s?.username)}" placeholder="root" autocomplete="off">
+      <div style="margin-top:16px"><button class="btn" style="width:100%" data-act="auth" id="auth"></button></div>
+      <div id="pwbox"><label class="lbl">Palavra-passe</label>
+        <div class="inrow"><input class="field" id="f-pw" type="password" autocomplete="new-password" placeholder="${s?.has_password ? "(manter a atual)" : "(deixa vazio para pedir no terminal)"}"><button class="btn sm" data-act="eye" id="eye">Mostrar</button></div></div>
+      <div id="keybox"><label class="lbl">Ficheiro da chave privada</label><input class="field" id="f-key" value="${esc(s?.key_path)}" placeholder="~/.ssh/id_ed25519" autocomplete="off"></div>
+      <div class="gray" id="hint" style="margin-top:8px"></div>
+      <div class="msg red" id="msg"></div>
+    </div></div>
+    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="save">Concluído</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
+    back: () => screenMulti(false),
+    acts: {
+      back: () => screenMulti(false), save,
+      auth: () => { const o = ["password", "key", "agent"]; st.auth = o[(o.indexOf(st.auth) + 1) % 3]; paint(); },
+      eye: () => { const f = $("#f-pw"); const vis = f.type === "password"; f.type = vis ? "text" : "password"; $("#eye").textContent = vis ? "Esconder" : "Mostrar"; },
+    },
+  });
+  const HINT = {
+    password: "A palavra-passe fica cifrada no cofre e nunca volta ao browser. É entregue ao ssh por SSH_ASKPASS.",
+    key: "Usa a tua chave privada (ssh -i). Se tiver frase-passe, o ssh pede-a no terminal.",
+    agent: "Não guarda segredos: usa o ssh-agent ou pergunta tudo no terminal.",
+  };
+  function paint() {
+    $("#auth").textContent = "Autenticação: " + { password: "Palavra-passe", key: "Chave SSH", agent: "Agente / Pedir" }[st.auth];
+    $("#pwbox").style.display = st.auth === "password" ? "" : "none";
+    $("#keybox").style.display = st.auth === "key" ? "" : "none";
+    $("#hint").textContent = HINT[st.auth];
+  }
+  paint();
+  onEnter("input.field", save);
+  async function save() {
+    const a = parseAddr($("#f-addr").value);
+    if (!a.host) { $("#msg").textContent = "Indica o endereço do servidor."; return; }
+    const pw = $("#f-pw").value;
+    const body = { id: s?.id, name: $("#f-name").value, host: a.host, port: a.port, username: $("#f-user").value.trim() || a.user,
+      auth: st.auth, key_path: $("#f-key").value, password: st.auth === "password" ? (pw || (s?.has_password ? null : "")) : null };
+    try { const r = await api("/api/servers", body); S.selSrv = r.item.id; delete PING[r.item.id]; screenMulti(); }
+    catch (e) { if (!e.locked) $("#msg").textContent = e.message; }
+  }
+}
+
+function screenDirect() {
+  show("direct", `
+    <div class="hdr"><div>Ligação Direta</div></div>
+    <div class="formwrap"><div class="form" style="margin-top:40px">
+      <label class="lbl">Endereço do Servidor</label><input class="field" id="f-addr" placeholder="utilizador@exemplo.pt:22" autofocus autocomplete="off">
+      <div class="gray" style="margin-top:8px">Não fica guardado. O ssh pede o que precisar no terminal.</div>
+      <div class="msg red" id="msg"></div>
+    </div></div>
+    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="go">Entrar no Servidor</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
+    back: () => screenMulti(false), acts: { back: () => screenMulti(false), go },
+  });
+  onEnter(".field", go);
+  function go() {
+    const a = parseAddr($("#f-addr").value);
+    if (!a.host) { $("#msg").textContent = "Indica o endereço do servidor."; return; }
+    connecting(a.host, () => api("/api/direct", { host: a.host, port: a.port, username: a.user }), false);
+  }
+}
+
+/* ---------- confirmação de apagar ---------- */
+function confirmDelete(what, name, doit, after) {
+  show("confirm", `<div class="menu">
+    <div>Tens a certeza que queres apagar ${esc(what)}?</div>
+    <div class="gray center panel">«${esc(name)}» será perdido para sempre! (Muito tempo!)</div>
+    <div class="rowb" style="margin-top:24px"><button class="btn w2" data-act="yes">Apagar</button><button class="btn w2" data-act="no" autofocus>Cancelar</button></div>
+  </div>`, { back: after, acts: { no: after, yes: async () => { try { await doit(); after(); } catch (e) { fail(e); } } } });
+}
+
+/* ---------- navegação com teclado nas listas ---------- */
+function listKeys(lst, ids, select, activate) {
+  lst.addEventListener("keydown", e => {
+    const arr = ids(); if (!arr.length) return;
+    const cur = S.screen === "multi" ? S.selSrv : S.selPw;
+    let i = arr.indexOf(cur);
+    if (e.key === "ArrowDown") { e.preventDefault(); select(arr[Math.min(arr.length - 1, i + 1)]); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); select(arr[Math.max(0, i - 1)]); }
+    else if (e.key === "Enter" && cur) { e.preventDefault(); click(); activate(); }
+    else return;
+    const el = $(".row.sel", lst); if (el) el.scrollIntoView({ block: "nearest" });
+  });
+}
+
+/* ======================================================================
+   OPÇÕES
+   ====================================================================== */
+function screenOptions() {
+  const s = S.settings || {};
+  const lockLbl = v => v ? `${v} min` : "Nunca";
+  const clipLbl = v => v ? `${v} s` : "Nunca";
+  const terms = S.info?.terminals || ["auto"];
+  const termLbl = t => t === "auto" ? "Automático" : t;
+  show("opts", `
+    <div class="hdr"><div>Opções</div></div>
+    <div class="formwrap"><div style="margin-top:24px" class="col">
+      <div class="rowb"><button class="btn w300" data-act="lock">Bloqueio Automático: ${lockLbl(s.auto_lock_min)}</button>
+        <button class="btn w300" data-act="clip">Limpar Cópia: ${clipLbl(s.clipboard_clear_s)}</button></div>
+      <div class="rowb"><button class="btn w300" data-act="term" ${terms.length < 2 ? "disabled" : ""}>Terminal: ${esc(termLbl(s.terminal || "auto"))}</button>
+        <button class="btn w300" data-act="sound">Sons: ${s.sound === false ? "Desligados" : "Ligados"}</button></div>
+      <div class="rowb" style="margin-top:16px"><button class="btn w300" data-act="master">Mudar Palavra-passe Mestra...</button>
+        <button class="btn w300" data-act="lockn">Bloquear Agora</button></div>
+      <div class="gray center panel" style="margin-top:24px">Cofre: ~/.pixelvault/vault.pv<br>AES-256-GCM · scrypt (N=32768)</div>
+    </div></div>
+    <div class="ftr"><button class="btn" data-act="done" autofocus>Concluído</button></div>`, {
+    back: screenMain,
+    acts: {
+      done: screenMain,
+      lock: () => cycle("auto_lock_min", [1, 5, 10, 15, 30, 60, 0], s.auto_lock_min),
+      clip: () => cycle("clipboard_clear_s", [10, 20, 30, 60, 0], s.clipboard_clear_s),
+      term: () => cycle("terminal", terms, s.terminal || "auto"),
+      sound: () => setSetting({ sound: s.sound === false }),
+      master: screenMaster,
+      lockn: async () => { try { await api("/api/lock", {}); } catch (e) {} screenLock(); },
+    },
+  });
+  function cycle(key, vals, cur) { setSetting({ [key]: vals[(vals.indexOf(cur) + 1) % vals.length] }); }
+}
+async function setSetting(patch) {
+  try { S.settings = (await api("/api/settings", patch)).settings; screenOptions(); } catch (e) { fail(e); }
+}
+function screenMaster() {
+  show("master", `
+    <div class="hdr"><div>Mudar Palavra-passe Mestra</div></div>
+    <div class="formwrap"><div class="form" style="margin-top:24px">
+      <label class="lbl">Atual</label><input class="field" id="o" type="password" autocomplete="current-password" autofocus>
+      <label class="lbl">Nova (mínimo 8 caracteres)</label><input class="field" id="n1" type="password" autocomplete="new-password">
+      <label class="lbl">Repetir a nova</label><input class="field" id="n2" type="password" autocomplete="new-password">
+      <div class="msg red" id="msg"></div>
+    </div></div>
+    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="save">Concluído</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
+    back: screenOptions, acts: { back: screenOptions, save },
+  });
+  onEnter(".field", save);
+  async function save() {
+    if ($("#n1").value !== $("#n2").value) { $("#msg").textContent = "As novas não coincidem."; return; }
+    $("#msg").innerHTML = `<span class="gray spin">A cifrar</span>`;
+    try { await api("/api/master", { old: $("#o").value, new: $("#n1").value }); toast("Feito!", "Palavra-passe mestra alterada."); screenOptions(); }
+    catch (e) { if (!e.locked) $("#msg").textContent = e.message; }
+  }
+}
+
+/* ======================================================================
+   Arranque
+   ====================================================================== */
+// Se o servidor bloquear sozinho (inatividade), volta ao ecrã de bloqueio.
+setInterval(async () => {
+  if (["lock", "fatal", "bye"].includes(S.screen)) return;
+  try { const st = await api("/api/state"); if (!st.unlocked) screenLock(); } catch (e) {}
+}, 20000);
+
+buildTextures();
+document.fonts.load('16px "PixelVault"').finally(async () => {
+  try { const st = await refreshState(); st.unlocked ? screenMain() : screenLock(); }
+  catch (e) { screenFatal(e.message); }
+});
+</script>
+</body>
+</html>
