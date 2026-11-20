@@ -36,7 +36,7 @@ try:
 except ImportError:  # pragma: no cover
     sys.exit("Falta a biblioteca 'cryptography'. Instala com:  pip install cryptography")
 
-VERSION = "1.0"
+VERSION = "1.1"
 HERE = Path(__file__).resolve().parent
 WEB = HERE / "web"
 HOME = Path(os.environ.get("PIXELVAULT_HOME") or (Path.home() / ".pixelvault"))
@@ -47,7 +47,8 @@ IS_MAC = sys.platform == "darwin"
 
 AAD = b"pixelvault-v1"
 SCRYPT = {"n": 2 ** 15, "r": 8, "p": 1}
-DEFAULT_SETTINGS = {"auto_lock_min": 10, "terminal": "auto", "clipboard_clear_s": 30, "sound": True}
+DEFAULT_SETTINGS = {"auto_lock_min": 10, "terminal": "auto", "clipboard_clear_s": 30, "sound": True,
+                    "lan_scan": False}
 
 HOST_RE = re.compile(r"^(?!-)[A-Za-z0-9.\-_:\[\]]{1,253}$")
 USER_RE = re.compile(r"^(?!-)[A-Za-z0-9._\-\\$]{1,64}$")
@@ -84,14 +85,32 @@ class Locked(Exception):
     pass
 
 
+RECOVERY_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # base32 de Crockford (sem I, L, O, U)
+
+
+def new_recovery_code() -> str:
+    raw = "".join(secrets.choice(RECOVERY_ALPHABET) for _ in range(25))  # 125 bits
+    return "-".join(raw[i:i + 5] for i in range(0, 25, 5))
+
+
+def normalize_code(code: str) -> str:
+    c = re.sub(r"[\s\-]", "", (code or "").upper())
+    return c.translate(str.maketrans({"O": "0", "I": "1", "L": "1"}))
+
+
 class Vault:
-    """Guarda os dados decifrados apenas em memória e apenas enquanto está desbloqueado."""
+    """Guarda os dados decifrados apenas em memória e apenas enquanto está desbloqueado.
+
+    Formato v2: os dados são cifrados com uma chave aleatória (DEK). A DEK é guardada duas vezes,
+    "embrulhada" com uma chave derivada da palavra-passe mestra e outra derivada do código de
+    recuperação. Assim qualquer um dos dois abre o cofre, e mudar um não obriga a mudar o outro.
+    """
 
     def __init__(self, path: Path):
         self.path = path
         self.lock = threading.RLock()
-        self.key: bytes | None = None
-        self.salt: bytes | None = None
+        self.key: bytes | None = None      # DEK
+        self.wraps: dict = {}              # {"master": {...}, "recovery": {...}}
         self.data: dict | None = None
         self.last_activity = time.time()
         self.failed = 0
@@ -104,6 +123,14 @@ class Vault:
     @property
     def unlocked(self) -> bool:
         return self.data is not None
+
+    def has_recovery(self) -> bool:
+        if self.unlocked:
+            return bool(self.wraps.get("recovery"))
+        try:
+            return bool(json.loads(self.path.read_text("utf-8")).get("recovery"))
+        except Exception:
+            return False
 
     def touch(self):
         self.last_activity = time.time()
@@ -129,54 +156,138 @@ class Vault:
         if mins and time.time() - self.last_activity > mins * 60:
             self.do_lock()
 
+    # --- embrulhar a DEK ----------------------------------------------------
+    @staticmethod
+    def _wrap(secret: str, dek: bytes, label: bytes) -> dict:
+        salt, nonce = secrets.token_bytes(16), secrets.token_bytes(12)
+        kek = derive(secret, salt, SCRYPT)
+        return {"salt": b64e(salt), "nonce": b64e(nonce), "kdf": {"name": "scrypt", **SCRYPT},
+                "key": b64e(AESGCM(kek).encrypt(nonce, dek, AAD + b"/" + label))}
+
+    @staticmethod
+    def _unwrap(secret: str, w: dict, label: bytes) -> bytes | None:
+        kek = derive(secret, b64d(w["salt"]), w["kdf"])
+        try:
+            return AESGCM(kek).decrypt(b64d(w["nonce"]), b64d(w["key"]), AAD + b"/" + label)
+        except Exception:
+            return None
+
+    def _throttle(self):
+        now = time.time()
+        if now < self.blocked_until:
+            raise ValueError(f"Demasiadas tentativas. Espera {int(self.blocked_until - now) + 1} s.")
+
+    def _bad_attempt(self):
+        self.failed += 1
+        if self.failed >= 3:
+            self.blocked_until = time.time() + min(300, 5 * 2 ** (self.failed - 3))
+
+    def _open(self, dek: bytes, blob: dict):
+        plain = AESGCM(dek).decrypt(b64d(blob["nonce"]), b64d(blob["data"]), AAD)
+        self.key = dek
+        self.data = json.loads(plain.decode("utf-8"))
+        self.data.setdefault("passwords", [])
+        self.data.setdefault("servers", [])
+        self.data.setdefault("settings", dict(DEFAULT_SETTINGS))
+        self.failed = 0
+        self.touch()
+
     # --- ciclo de vida ----------------------------------------------------
-    def create(self, master: str):
+    def create(self, master: str) -> str:
+        """Cria o cofre e devolve o código de recuperação (mostrado uma única vez)."""
         with self.lock:
             if self.exists():
                 raise ValueError("Já existe um cofre.")
-            self.salt = secrets.token_bytes(16)
-            self.key = derive(master, self.salt, SCRYPT)
+            self.key = secrets.token_bytes(32)
+            code = new_recovery_code()
+            self.wraps = {"master": self._wrap(master, self.key, b"master"),
+                          "recovery": self._wrap(normalize_code(code), self.key, b"recovery")}
             self.data = {"passwords": [], "servers": [], "settings": dict(DEFAULT_SETTINGS)}
             self.save()
             self.touch()
+            return code
 
     def unlock(self, master: str) -> bool:
         with self.lock:
-            now = time.time()
-            if now < self.blocked_until:
-                raise ValueError(f"Demasiadas tentativas. Espera {int(self.blocked_until - now) + 1} s.")
+            self._throttle()
             blob = json.loads(self.path.read_text("utf-8"))
-            salt = b64d(blob["salt"])
-            key = derive(master, salt, blob["kdf"])
-            try:
-                plain = AESGCM(key).decrypt(b64d(blob["nonce"]), b64d(blob["data"]), AAD)
-            except Exception:
-                self.failed += 1
-                if self.failed >= 3:
-                    self.blocked_until = now + min(300, 5 * 2 ** (self.failed - 3))
+            if blob.get("v", 1) == 1:  # formato antigo: a chave vinha diretamente da mestra
+                key = derive(master, b64d(blob["salt"]), blob["kdf"])
+                try:
+                    self._open(key, blob)
+                except Exception:
+                    self._bad_attempt()
+                    return False
+                # migra para v2 (sem código de recuperação até o utilizador gerar um)
+                self.key = secrets.token_bytes(32)
+                self.wraps = {"master": self._wrap(master, self.key, b"master")}
+                self.save()
+                return True
+            dek = self._unwrap(master, blob["master"], b"master")
+            if dek is None:
+                self._bad_attempt()
                 return False
-            self.failed = 0
-            self.salt, self.key = salt, key
-            self.data = json.loads(plain.decode("utf-8"))
-            self.data.setdefault("passwords", [])
-            self.data.setdefault("servers", [])
-            self.data.setdefault("settings", dict(DEFAULT_SETTINGS))
-            self.touch()
+            self.wraps = {k: blob[k] for k in ("master", "recovery") if blob.get(k)}
+            self._open(dek, blob)
+            return True
+
+    def recover(self, code: str, new_master: str) -> str:
+        """Abre o cofre com o código de recuperação, define nova mestra e devolve um código novo."""
+        with self.lock:
+            self._throttle()
+            blob = json.loads(self.path.read_text("utf-8"))
+            if not blob.get("recovery"):
+                raise ValueError("Este cofre não tem código de recuperação.")
+            dek = self._unwrap(normalize_code(code), blob["recovery"], b"recovery")
+            if dek is None:
+                self._bad_attempt()
+                raise ValueError("Código de recuperação errado.")
+            self._open(dek, blob)
+            new_code = new_recovery_code()  # o código usado deixa de valer
+            self.wraps = {"master": self._wrap(new_master, dek, b"master"),
+                          "recovery": self._wrap(normalize_code(new_code), dek, b"recovery")}
+            self.save()
+            return new_code
+
+    def check_master(self, master: str) -> bool:
+        with self.lock:
+            self.require()
+            ok = self._unwrap(master, self.wraps["master"], b"master") == self.key
+            if not ok:
+                self._bad_attempt()
+            return ok
+
+    def new_recovery(self, master: str) -> str:
+        with self.lock:
+            self._throttle()
+            if not self.check_master(master):
+                raise ValueError("A palavra-passe mestra está errada.")
+            code = new_recovery_code()
+            self.wraps["recovery"] = self._wrap(normalize_code(code), self.key, b"recovery")
+            self.save()
+            return code
+
+    def change_master(self, old: str, new: str) -> bool:
+        with self.lock:
+            self._throttle()
+            if not self.check_master(old):
+                return False
+            self.wraps["master"] = self._wrap(new, self.key, b"master")
+            self.save()
             return True
 
     def do_lock(self):
         with self.lock:
             self.key = None
             self.data = None
-            self.salt = None
+            self.wraps = {}
 
     def save(self):
         with self.lock:
             assert self.key is not None and self.data is not None
             nonce = secrets.token_bytes(12)
             ct = AESGCM(self.key).encrypt(nonce, json.dumps(self.data).encode("utf-8"), AAD)
-            blob = {"format": "pixelvault", "v": 1, "kdf": {"name": "scrypt", **SCRYPT},
-                    "salt": b64e(self.salt), "nonce": b64e(nonce), "data": b64e(ct)}
+            blob = {"format": "pixelvault", "v": 2, **self.wraps, "nonce": b64e(nonce), "data": b64e(ct)}
             self.path.parent.mkdir(parents=True, exist_ok=True)
             _private_dir(self.path.parent)
             tmp = self.path.with_suffix(".tmp")
@@ -187,15 +298,6 @@ class Vault:
                 os.fsync(f.fileno())
             os.replace(tmp, self.path)
 
-    def change_master(self, old: str, new: str) -> bool:
-        with self.lock:
-            self.require()
-            if not hmac.compare_digest(derive(old, self.salt, SCRYPT), self.key):
-                return False
-            self.salt = secrets.token_bytes(16)
-            self.key = derive(new, self.salt, SCRYPT)
-            self.save()
-            return True
 
 
 def _private_dir(p: Path):
@@ -376,6 +478,40 @@ def ping(host: str, port: int) -> dict:
         return {"ok": False, "error": _short_err(e)}
 
 
+def lan_scan(port: int = 22) -> list[dict]:
+    """Procura máquinas com SSH aberto na tua rede local (/24 do IPv4 privado deste computador)."""
+    import ipaddress
+    from concurrent.futures import ThreadPoolExecutor
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("192.0.2.1", 9))  # UDP: não envia nada, só escolhe a interface
+            me = s.getsockname()[0]
+    except OSError:
+        return []
+    ip = ipaddress.ip_address(me)
+    if not ip.is_private or ip.is_loopback:
+        return []
+    net = ipaddress.ip_network(f"{me}/24", strict=False)
+
+    def probe(h):
+        t0 = time.perf_counter()
+        try:
+            with socket.create_connection((str(h), port), timeout=0.5) as c:
+                ms = int((time.perf_counter() - t0) * 1000)
+                c.settimeout(0.8)
+                try:
+                    banner = c.recv(255).split(b"\n")[0].decode("utf-8", "replace").strip()
+                except OSError:
+                    banner = ""
+            return {"host": str(h), "port": port, "ms": ms, "banner": banner[:80], "me": str(h) == me}
+        except OSError:
+            return None
+
+    with ThreadPoolExecutor(64) as ex:
+        found = [r for r in ex.map(probe, net.hosts()) if r]
+    return found
+
+
 def _short_err(e: OSError) -> str:
     if isinstance(e, socket.timeout):
         return "Tempo esgotado"
@@ -428,7 +564,8 @@ class App:
                 v.check_timeout()
                 st = {"exists": v.exists(), "unlocked": v.unlocked, "version": VERSION,
                       "platform": platform.system(), "ssh": bool(find_ssh()),
-                      "terminals": available_terminals()}
+                      "terminals": available_terminals(),
+                      "has_recovery": v.exists() and v.has_recovery()}
                 if v.unlocked:
                     st["settings"] = v.settings()
                 return st
@@ -437,8 +574,15 @@ class App:
             master = body.get("master") or ""
             if len(master) < 8:
                 raise ValueError("A palavra-passe mestra precisa de pelo menos 8 caracteres.")
-            v.create(master)
-            return {"ok": True}
+            return {"recovery_code": v.create(master)}
+
+        if path == "/api/recover":
+            new = body.get("new") or ""
+            if len(new) < 8:
+                raise ValueError("A nova palavra-passe mestra precisa de pelo menos 8 caracteres.")
+            if not v.exists():
+                raise ValueError("Ainda não existe cofre.")
+            return {"recovery_code": v.recover(body.get("code") or "", new)}
 
         if path == "/api/unlock":
             if not v.exists():
@@ -467,10 +611,18 @@ class App:
             if "terminal" in body:
                 t = clean_str(body["terminal"], 40)
                 s["terminal"] = t if t in available_terminals() else "auto"
+            if "lan_scan" in body:
+                s["lan_scan"] = bool(body["lan_scan"])
             if "sound" in body:
                 s["sound"] = bool(body["sound"])
             v.save()
             return {"settings": v.settings()}
+
+        if path == "/api/recovery/new":
+            return {"recovery_code": v.new_recovery(body.get("master") or "")}
+
+        if path == "/api/lan/scan":
+            return {"items": lan_scan()}
 
         if path == "/api/master":
             new = body.get("new") or ""
