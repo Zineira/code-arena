@@ -50,7 +50,9 @@ check(call("/api/state", token=False)[0] == 401, "API sem token é recusada")
 check(call("/api/state", host="evil.example:80")[0] == 403, "Host estranho é recusado (DNS rebinding)")
 check(call("/api/state")[1]["exists"] is False, "sem cofre no início")
 check(call("/api/setup", {"master": "curta"})[0] == 400, "mestra curta recusada")
-check(call("/api/setup", {"master": "correct horse battery"})[0] == 200, "cofre criado")
+s, r = call("/api/setup", {"master": "correct horse battery"})
+check(s == 200 and len(r.get("recovery_code", "")) == 29, "cofre criado com código de recuperação")
+code1 = r["recovery_code"]
 s, r = call("/api/servers", {"name": "Casa", "host": "192.168.1.10", "port": 2222, "username": "pi",
                              "auth": "password", "password": "segredo-ssh"})
 check(s == 200 and "password" not in r["item"] and r["item"]["has_password"], "servidor guardado sem devolver a password")
@@ -93,6 +95,44 @@ check(call("/api/servers")[1]["items"][0]["name"] == "Casa 2", "dados persistem 
 check(call("/api/master", {"old": "correct horse battery", "new": "nova mestra 123"})[0] == 200, "mudar mestra")
 call("/api/lock", {})
 check(call("/api/unlock", {"master": "nova mestra 123"})[0] == 200, "desbloquear com a nova mestra")
+check(call("/api/lan/scan", {})[0] == 200, "procura na rede local responde")
+
+# recuperação
+call("/api/lock", {})
+check(call("/api/state")[1]["has_recovery"] is True, "estado indica que há recuperação")
+check(call("/api/recover", {"code": "AAAAA-AAAAA-AAAAA-AAAAA-AAAAA", "new": "outra mestra 1"})[0] == 400, "código errado recusado")
+app.vault.failed = 0; app.vault.blocked_until = 0
+s, r = call("/api/recover", {"code": code1.lower().replace("-", " "), "new": "recuperada 123"})
+check(s == 200 and r["recovery_code"] != code1, "recuperar com o código (minúsculas/espaços) dá um código novo")
+code2 = r["recovery_code"]
+check(call("/api/servers")[1]["items"][0]["name"] == "Casa 2", "dados intactos após recuperação")
+call("/api/lock", {})
+check(call("/api/recover", {"code": code1, "new": "x" * 10})[0] == 400, "código antigo deixou de funcionar")
+app.vault.failed = 0; app.vault.blocked_until = 0
+check(call("/api/unlock", {"master": "recuperada 123"})[0] == 200, "nova mestra funciona")
+check(call("/api/recovery/new", {"master": "errada!!"})[0] == 400, "novo código exige a mestra")
+app.vault.failed = 0; app.vault.blocked_until = 0
+s, r = call("/api/recovery/new", {"master": "recuperada 123"})
+check(s == 200 and r["recovery_code"] != code2, "gerar novo código")
+call("/api/lock", {})
+check(call("/api/recover", {"code": code2, "new": "y" * 10})[0] == 400, "código anterior invalidado")
+app.vault.failed = 0; app.vault.blocked_until = 0
+check(call("/api/recover", {"code": r["recovery_code"], "new": "recuperada 456"})[0] == 200, "código novo funciona")
+
+# migração de um cofre v1 (formato antigo)
+import base64, hashlib, secrets as sec
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+salt, nonce = sec.token_bytes(16), sec.token_bytes(12)
+k = hashlib.scrypt(b"mestra antiga", salt=salt, n=2**15, r=8, p=1, maxmem=128*1024*1024, dklen=32)
+ct = AESGCM(k).encrypt(nonce, json.dumps({"passwords": [], "servers": [{"id": "a", "name": "Velho", "host": "h", "port": 22}]}).encode(), b"pixelvault-v1")
+old = Path(TMP, "v1.pv")
+old.write_text(json.dumps({"v": 1, "kdf": {"name": "scrypt", "n": 2**15, "r": 8, "p": 1}, "salt": base64.b64encode(salt).decode(),
+                           "nonce": base64.b64encode(nonce).decode(), "data": base64.b64encode(ct).decode()}))
+v1 = pv.Vault(old)
+check(v1.unlock("mestra antiga") and v1.data["servers"][0]["name"] == "Velho", "abre cofre v1")
+check(json.loads(old.read_text())["v"] == 2 and not v1.has_recovery(), "migrado para v2 (sem recuperação ainda)")
+v1.do_lock()
+check(v1.unlock("mestra antiga"), "cofre migrado volta a abrir")
 
 # ping a uma porta local aberta (o próprio servidor)
 r = pv.ping("127.0.0.1", app.port)

@@ -7,7 +7,20 @@ Cofre local de palavras-passe e de acessos SSH, com um menu ao estilo dos jogos 
 | **Um Jogador** | As tuas palavras-passe: procurar, copiar, mostrar, gerar, editar. |
 | **Multijogador** | Os teus servidores (endpoints). Cada um mostra o estado (barras de sinal, ms e a versão do SSH). **Entrar no Servidor** abre o terminal já ligado por `ssh`. |
 | **Ligação Direta** | Liga a um `utilizador@anfitrião:porta` sem guardar nada. |
-| **Opções...** | Bloqueio automático, limpeza da área de transferência, terminal, sons, mudar a palavra-passe mestra. |
+| **Opções...** | Bloqueio automático, limpeza da área de transferência, terminal, sons, procura na rede local, mudar a palavra-passe mestra, novo código de recuperação. |
+| 🔒 / 🛡 | Os botões quadrados ao lado de Opções e Sair bloqueiam o cofre e geram um novo código de recuperação. |
+
+Com **Procurar na Rede Local** ligado (está desligado por omissão), o Multijogador procura máquinas com a porta 22 aberta na tua rede `/24` e mostra-as por baixo dos teus servidores. Podes entrar nelas ou adicioná-las à lista.
+
+## Recuperar a palavra-passe mestra
+
+Quando crias o cofre recebes um **código de recuperação** (`XXXXX-XXXXX-XXXXX-XXXXX-XXXXX`, 125 bits aleatórios). Copia-o ou descarrega-o em `.txt` e guarda-o fora do computador. Só é mostrado uma vez.
+
+Se esqueceres a mestra: no ecrã de bloqueio carrega em **Esqueci-me da Palavra-passe**, escreve o código e escolhe uma nova mestra. O código usado deixa de funcionar e recebes um novo. Em *Opções > Código de Recuperação...* (ou no botão 🛡) podes gerar outro a qualquer momento, desde que saibas a mestra.
+
+Como funciona: os dados são cifrados com uma chave aleatória, e essa chave é guardada duas vezes no ficheiro, cifrada uma vez com a mestra e outra com o código, ambos passados por scrypt. Qualquer um dos dois abre o cofre. Mudar a mestra não invalida o código, e vice-versa. **Sem a mestra e sem o código ninguém consegue abrir o cofre**, incluindo tu.
+
+Cofres criados com a versão 1.0 são convertidos automaticamente na primeira abertura. Depois disso, gera o código em Opções.
 
 ## Instalar e correr
 
@@ -36,7 +49,7 @@ Opções: `--port 47000` para fixar a porta, `--no-browser` para não abrir o br
   A palavra-passe não aparece na linha de comandos, nem no histórico, nem em ficheiros temporários. Qualquer outra pergunta (impressão digital do servidor na primeira ligação, 2FA, uma segunda tentativa) é feita a ti no terminal.
 - **Bloqueio automático:** ao fim de 10 minutos sem atividade (configurável), a chave e os dados são apagados da memória.
 - **Área de transferência:** ao copiar, o PixelVault limpa-a passado 30 s (configurável), desde que a janela ainda esteja aberta.
-- **Tentativas erradas:** a partir da terceira tentativa errada da mestra há um tempo de espera crescente.
+- **Tentativas erradas:** a partir da terceira tentativa errada da mestra ou do código de recuperação há um tempo de espera crescente.
 
 A melhor opção continua a ser a **autenticação por chave SSH**. Em *Autenticação: Chave SSH* indicas o ficheiro (por exemplo `~/.ssh/id_ed25519`) e o PixelVault guarda só o caminho.
 

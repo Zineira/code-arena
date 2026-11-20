@@ -37,7 +37,9 @@ body.dirt { background: linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)), var(-
 .title .back { position: absolute; left: 0; top: 0; color: #2b2b2b; text-shadow: var(--extrude); }
 .title .face { position: relative; color: transparent; text-shadow: none;
   background: var(--stone) 0 0 / 64px; -webkit-background-clip: text; background-clip: text; image-rendering: pixelated; }
-.edition { margin-top: -6px; color: #e8c46a; text-shadow: 2px 2px 0 #4a3510; letter-spacing: 6px; font-size: 16px; }
+.edition { position: relative; display: inline-block; margin-top: -18px; font-size: 32px; line-height: 44px; letter-spacing: 2px; }
+.edition .back { position: absolute; left: 0; top: 0; color: #1e1e1e; text-shadow: 1px 1px 0 #2a2a2a, 2px 2px 0 #2a2a2a, 3px 3px 0 #1a1a1a, -2px 0 0 #1a1a1a, 0 -2px 0 #1a1a1a; }
+.edition .face { position: relative; color: #d6d6d6; text-shadow: none; }
 .splash { position: absolute; right: -70px; bottom: 6px; color: var(--yellow); text-shadow: 2px 2px 0 #3f3f15;
   white-space: nowrap; transform: rotate(-20deg); transform-origin: center; animation: pulse .5s ease-in-out infinite alternate; }
 @keyframes pulse { from { scale: 1; } to { scale: 1.08; } }
@@ -56,7 +58,8 @@ body.dirt { background: linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)), var(-
   box-shadow: inset 2px 2px 0 rgba(255,255,255,.32), inset -2px -4px 0 rgba(0,0,0,.38);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none;
 }
-.btn:hover, .btn:focus-visible { border-color: #fff; filter: brightness(1.12); }
+.btn:hover, .btn:focus-visible { border-color: #fff; color: #ffffa0;
+  background: linear-gradient(rgba(96,118,255,.42), rgba(70,88,210,.42)), var(--btn) 0 0 / 32px #6f6f6f; }
 .btn:active { filter: brightness(.95); }
 .btn:disabled { color: var(--gray); text-shadow: none; cursor: default; filter: none; border-color: #000;
   background: #2d2d2d; box-shadow: inset 2px 2px 0 rgba(255,255,255,.06), inset -2px -4px 0 rgba(0,0,0,.25); }
@@ -64,7 +67,14 @@ body.dirt { background: linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)), var(-
 .btn.w3 { width: min(224px, calc(33vw - 14px)); }
 .btn.w4 { width: min(148px, calc(25vw - 12px)); }
 .btn.w300 { width: min(300px, calc(50vw - 20px)); }
-.btn.sq { width: 40px; padding: 0; }
+.btn.sq { width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.btn.half { width: min(196px, calc(50vw - 72px)); }
+.btn.full { width: 100%; }
+.btn.badge { position: relative; }
+.btn .bdg { position: absolute; right: 6px; top: 50%; translate: 0 -50%; display: flex; }
+img.gl { width: 16px; height: 16px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 #3f3f3f); }
+.btn.sq img.gl { width: 24px; height: 24px; }
+.opts-row { margin-top: 16px; flex-wrap: nowrap; }
 .btn.sm { width: auto; padding: 0 12px; flex: none; }
 .rowb { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
@@ -73,7 +83,7 @@ body.dirt { background: linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.72)), var(-
 .field {
   font: inherit; color: #e0e0e0; text-shadow: 2px 2px 0 #383838; background: #000;
   border: 2px solid var(--gray); border-radius: 0; height: 40px; padding: 0 8px; width: 100%;
-  outline: none; caret-color: #e0e0e0; user-select: text;
+  outline: none; caret-color: #e0e0e0; caret-shape: underscore; user-select: text;
 }
 .field:focus { border-color: #fff; }
 .field::placeholder { color: #555; text-shadow: none; }
@@ -107,11 +117,21 @@ label.lbl { color: var(--gray); margin: 12px 0 2px; display: block; }
 .row:hover .mv { display: block; }
 .mv b { position: absolute; left: 4px; width: 28px; height: 28px; background: #fff; cursor: pointer; filter: drop-shadow(2px 2px 0 #3f3f3f); }
 .mv b:hover { background: #ffff88; }
-.mv b.up { top: 4px; clip-path: polygon(50% 15%, 95% 75%, 5% 75%); }
-.mv b.dn { bottom: 4px; clip-path: polygon(5% 25%, 95% 25%, 50% 85%); }
+.mv b.play { left: 6px; top: 14px; width: 30px; height: 36px; clip-path: polygon(15% 5%, 90% 50%, 15% 95%); }
+.mv b.up { left: 38px; width: 22px; height: 22px; top: 4px; clip-path: polygon(50% 15%, 95% 75%, 5% 75%); }
+.mv b.dn { left: 38px; width: 22px; height: 22px; top: auto; bottom: 4px; clip-path: polygon(5% 25%, 95% 25%, 50% 85%); }
+.nm { display: flex; justify-content: space-between; gap: 8px; }
+.nm > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.nm .right { display: flex; gap: 6px; align-items: center; flex: none; }
+.dred { color: #e03b3b; }
+.scan { text-align: center; padding: 18px 0 12px; }
+.ooo { display: flex; gap: 10px; justify-content: center; margin-top: 6px; }
+.ooo i { width: 8px; height: 8px; border: 2px solid #a0a0a0; animation: ooo 1.2s steps(1) infinite; }
+.ooo i:nth-child(2) { animation-delay: .4s; } .ooo i:nth-child(3) { animation-delay: .8s; }
+@keyframes ooo { 0% { background: #e0e0e0; border-color: #e0e0e0; transform: scale(1.25); } 34% { background: none; border-color: #a0a0a0; transform: none; } }
 .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 .txt > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ping { flex: none; display: flex; align-items: flex-end; gap: 2px; height: 18px; margin: 2px 2px 0 0; align-self: flex-start; position: relative; }
+.ping { flex: none; display: flex; align-items: flex-end; gap: 2px; height: 16px; position: relative; }
 .ping i { width: 4px; background: #2f2f2f; box-shadow: 2px 0 0 #000; }
 .ping i:nth-child(1){height:4px} .ping i:nth-child(2){height:7px} .ping i:nth-child(3){height:10px}
 .ping i:nth-child(4){height:13px} .ping i:nth-child(5){height:16px}
@@ -125,6 +145,15 @@ label.lbl { color: var(--gray); margin: 12px 0 2px; display: block; }
 .ms { position: absolute; right: 12px; top: 26px; color: var(--gray); display: none; }
 .row:hover .ms { display: block; }
 
+.fs { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+.fs-title { text-align: center; padding: 28px 16px 12px; }
+.fs-body { flex: 1; display: flex; justify-content: center; padding: 0 16px 24px; }
+.fs-body.center-v { align-items: center; }
+.fs-btns { margin-top: 28px; }
+.spacer { height: 72px; }
+.codebox { margin: 12px 0; padding: 12px 8px; background: #000; border: 2px solid #a0a0a0; color: var(--yellow);
+  text-shadow: 2px 2px 0 #3f3f15; text-align: center; letter-spacing: 1px; white-space: nowrap; user-select: all; }
+.field.mono { letter-spacing: 1px; text-transform: uppercase; }
 .formwrap { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 8px 16px 24px; }
 .form { width: min(400px, 100%); }
 .msg { min-height: 22px; margin-top: 12px; text-align: center; }
@@ -143,7 +172,7 @@ label.lbl { color: var(--gray); margin: 12px 0 2px; display: block; }
 @keyframes tout { to { transform: translateX(110%); } }
 .spin::after { content: ""; animation: dots 1.2s steps(4) infinite; }
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
-@media (prefers-reduced-motion: reduce) { .splash, .ping.wait i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .splash, .ping.wait i, .ooo i { animation: none; } }
 </style>
 </head>
 <body>
@@ -242,6 +271,7 @@ function buildTextures() {
   const drip = Array.from({ length: 16 }, (_, i) => 3 + (hash("g" + i) % 3));
   TEX.grass = makeTex(41, (x, y, r) => y < drip[x] ? rgb([93, 158, 52], .8 + r() * .35) : rgb([134, 96, 67], speck(r, .78, .18)));
   TEX.leaves = makeTex(53, (x, y, r) => { const v = r(); return v < .14 ? "rgba(20,50,12,1)" : rgb([64, 128, 40], .65 + r() * .55); });
+  TEX.blossom = makeTex(59, (x, y, r) => { const v = r(); return v < .12 ? "rgba(90,40,70,1)" : v < .3 ? rgb([250, 205, 225], .95 + r() * .1) : rgb([232, 150, 190], .75 + r() * .4); });
   TEX.log = makeTex(67, (x, y, r) => rgb([104, 82, 50], (x % 4 === 0 ? .7 : .95) + r() * .15));
   TEX.sand = makeTex(71, (x, y, r) => rgb([219, 207, 160], .9 + r() * .12));
   TEX.water = makeTex(83, (x, y, r) => rgb([52, 92, 205], .8 + r() * .25, .82));
@@ -297,12 +327,20 @@ const Pano = {
       }
       for (let r = gr; r < SEA; r++) g.drawImage(TEX.water, sx, H - (r + 1) * B);
     }
+    // flores e erva por cima dos blocos de relva
+    for (let c = c0; c < c0 + cols; c++) {
+      const gr = this.ground(c); if (gr <= SEA + 1) continue;
+      const h = hash("f" + c), sx = c * B - ox, y = H - gr * B;
+      if (h % 3 === 0) { g.fillStyle = ["#ff7eb6", "#ffd84a", "#ffffff", "#ff4f4f"][h % 4]; g.fillRect(sx + 4 + h % 8, y - 4, 3, 3); g.fillStyle = "#3d7a22"; g.fillRect(sx + 5 + h % 8, y - 1, 1, 1); }
+      if (h % 4 === 1) { g.fillStyle = "#5b9e34"; g.fillRect(sx + 2 + (h >> 3) % 10, y - 3, 1, 3); g.fillRect(sx + 4 + (h >> 3) % 10, y - 2, 1, 2); }
+    }
     // árvores
     for (let c = c0; c < c0 + cols; c++) {
       if (!this.tree(c)) continue;
       const gr = this.ground(c), sx = c * B - ox;
       for (let k = 0; k < 4; k++) g.drawImage(TEX.log, sx, H - (gr + k + 1) * B);
-      const leaf = (dc, r) => g.drawImage(TEX.leaves, sx + dc * B, H - (r + 1) * B);
+      const lt = hash("p" + c) % 2 ? TEX.blossom : TEX.leaves;
+      const leaf = (dc, r) => g.drawImage(lt, sx + dc * B, H - (r + 1) * B);
       for (let dc = -2; dc <= 2; dc++) { leaf(dc, gr + 3); if (dc) leaf(dc, gr + 2); }
       for (let dc = -1; dc <= 1; dc++) { leaf(dc, gr + 4); if (!dc) leaf(dc, gr + 5); }
       leaf(-1, gr + 5); leaf(1, gr + 5);
@@ -338,6 +376,26 @@ function identicon(seed, kind) {
 }
 
 /* ======================================================================
+   Ícones pequenos dos botões (pixel art)
+   ====================================================================== */
+const GLYPHS = {
+  lock: ["...##...", "..#..#..", "..#..#..", ".######.", ".##..##.", ".###.##.", ".######.", "........"],
+  shield: [".######.", ".#AAAA#.", ".#AAAA#.", ".#AAAA#.", "..#AA#..", "..#AA#..", "...##...", "........"],
+  term: ["########", "#BBBBBB#", "#B#BBBB#", "#BB#BBB#", "#B#B##B#", "#BBBBBB#", "########", "........"],
+  key: ["........", ".###....", "#...####", "#...#.#.", ".###....", "........", "........", "........"],
+};
+function glyphIcon(name, fg = "#fff") {
+  const key = "g:" + name + fg; if (iconCache.has(key)) return iconCache.get(key);
+  const c = document.createElement("canvas"); c.width = c.height = 8; const g = c.getContext("2d");
+  GLYPHS[name].forEach((row, y) => [...row].forEach((ch, x) => {
+    const col = ch === "#" ? fg : ch === "A" ? "#5aa0ff" : ch === "B" ? "#1b1b1b" : null;
+    if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+  }));
+  const url = c.toDataURL(); iconCache.set(key, url); return url;
+}
+const ico = (name, fg) => `<img class="gl" src="${glyphIcon(name, fg)}" alt="">`;
+
+/* ======================================================================
    Gestão de ecrãs
    ====================================================================== */
 function show(name, html, { pano = false, back = null, acts = {} } = {}) {
@@ -354,17 +412,26 @@ addEventListener("keydown", ev => {
 });
 function onEnter(sel, fn) { $$(sel, app).forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && i.tagName !== "TEXTAREA") { e.preventDefault(); click(); fn(); } })); }
 
+/* Ecrã de formulário ao estilo "Editar Informação do Servidor": título em cima, campos e botões empilhados. */
+function formScreen(title, inner, buttons) {
+  return `<div class="fs"><div class="fs-title">${title}</div>
+    <div class="fs-body"><div class="form">${inner}
+      <div class="col fs-btns">${buttons}</div></div></div></div>`;
+}
+const fbtn = (act, label, extra = "") => `<button class="btn full" data-act="${act}" ${extra}>${label}</button>`;
+
 const SPLASHES = [
   "Agora com AES-256-GCM!", "100% local!", "Sem nuvem!", "127.0.0.1, doce lar!", "scrypt é amigo!",
   "Não partilhes a mestra!", "SSH > Telnet!", "Também experimenta Code Arena!", "Ctrl+C para sair!",
   "Palavras-passe longas!", "Bloqueia antes do café!", "Feito com blocos!", "ssh -p 22!", "Agora com cedilha!",
+  "Guarda o código de recuperação!", "Tem cuidado, pá!", "Chaves > palavras-passe!",
 ];
 function titleHtml(splash = true) {
   const s = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
   return `<div class="title-wrap"><div class="title"><span class="back" aria-hidden="true">PIXELVAULT</span><span class="face">PIXELVAULT</span></div>
-    <div class="edition">COFRE LOCAL</div>${splash ? `<div class="splash">${esc(s)}</div>` : ""}</div>`;
+    <div class="edition"><span class="back" aria-hidden="true">COFRE LOCAL</span><span class="face">COFRE LOCAL</span></div>${splash ? `<div class="splash">${esc(s)}</div>` : ""}</div>`;
 }
-const footer = () => `<div class="foot"><span>PixelVault ${esc(S.info?.version || "")}</span><span class="gray">Nada sai da tua máquina.</span></div>`;
+const footer = () => `<div class="foot"><span>PixelVault ${esc(S.info?.version || "")}</span><span>Feito em casa. Não partilhes a mestra!</span></div>`;
 
 /* ---------- bloqueio / criação ---------- */
 async function screenLock() {
@@ -375,14 +442,15 @@ async function screenLock() {
   show("lock", `<div class="menu">${titleHtml(false)}
     <div class="panel">
       ${creating ? `<div class="center">Bem-vindo! Cria o teu cofre.</div>
-        <div class="center gray" style="margin-top:6px">A palavra-passe mestra cifra tudo e não pode ser recuperada.</div>
+        <div class="center gray" style="margin-top:6px">A palavra-passe mestra cifra tudo. Vais receber um código de recuperação para o caso de a esqueceres.</div>
         <label class="lbl">Palavra-passe mestra</label><input class="field" id="m1" type="password" autocomplete="new-password" autofocus>
         <label class="lbl">Repetir</label><input class="field" id="m2" type="password" autocomplete="new-password">`
       : `<div class="center">O cofre está bloqueado.</div>
         <label class="lbl">Palavra-passe mestra</label><input class="field" id="m1" type="password" autocomplete="current-password" autofocus>`}
       <div class="msg red" id="msg"></div>
-      <div class="col" style="margin-top:8px"><button class="btn" data-act="go">${creating ? "Criar Cofre" : "Desbloquear"}</button></div>
-    </div></div>${footer()}`, { pano: true, acts: { go } });
+      <div class="col" style="margin-top:8px"><button class="btn full" data-act="go">${creating ? "Criar Cofre" : "Desbloquear"}</button>
+      ${!creating ? `<button class="btn full" data-act="forgot" ${st.has_recovery ? "" : "disabled"}>Esqueci-me da Palavra-passe</button>` : ""}</div>
+    </div></div>${footer()}`, { pano: true, acts: { go, forgot: screenRecover } });
   onEnter(".field", go);
   async function go() {
     const m1 = $("#m1").value, msg = $("#msg");
@@ -390,9 +458,12 @@ async function screenLock() {
     msg.innerHTML = `<span class="gray spin">${creating ? "A criar" : "A abrir"}</span>`;
     $$(".btn", app).forEach(b => b.disabled = true);
     try {
-      await api(creating ? "/api/setup" : "/api/unlock", { master: m1 });
-      await refreshState(); screenMain();
-    } catch (e) { msg.textContent = e.message; $$(".btn", app).forEach(b => b.disabled = false); $("#m1").select(); }
+      const r = await api(creating ? "/api/setup" : "/api/unlock", { master: m1 });
+      await refreshState();
+      if (r.recovery_code) return screenRecoveryCode(r.recovery_code, "Cofre criado!");
+      screenMain();
+      if (!S.info.has_recovery) toast("Sem código de recuperação", "Gera um em Opções > Código de Recuperação.", true);
+    } catch (e) { msg.textContent = e.message; $$(".btn", app).forEach(b => b.disabled = false); if (creating || !st.has_recovery) $$("[data-act=forgot]", app).forEach(b => b.disabled = true); $("#m1").select(); }
   }
 }
 async function refreshState() { const st = await api("/api/state"); S.info = st; S.settings = st.settings || S.settings; return st; }
@@ -401,17 +472,79 @@ function screenFatal(text) {
     <div class="center gray panel">Corre <span class="yellow">python pixelvault.py</span> e abre o link que aparece.</div></div>`, { pano: true });
 }
 
+/* ---------- recuperação ---------- */
+function screenRecover() {
+  show("recover", formScreen("Recuperar o Cofre", `
+      <div class="gray" style="margin-bottom:8px">Escreve o código de recuperação que guardaste quando criaste o cofre e escolhe uma nova palavra-passe mestra.</div>
+      <label class="lbl">Código de Recuperação</label><input class="field mono" id="code" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" spellcheck="false" autofocus>
+      <label class="lbl">Nova palavra-passe mestra</label><input class="field" id="n1" type="password" autocomplete="new-password">
+      <label class="lbl">Repetir</label><input class="field" id="n2" type="password" autocomplete="new-password">
+      <div class="msg red" id="msg"></div>`,
+    fbtn("go", "Recuperar Cofre") + fbtn("back", "Cancelar")), { back: screenLock, acts: { back: screenLock, go } });
+  onEnter(".field", go);
+  async function go() {
+    if ($("#n1").value !== $("#n2").value) { $("#msg").textContent = "As palavras-passe não coincidem."; return; }
+    $("#msg").innerHTML = `<span class="gray spin">A verificar</span>`;
+    try {
+      const r = await api("/api/recover", { code: $("#code").value, new: $("#n1").value });
+      await refreshState();
+      screenRecoveryCode(r.recovery_code, "Cofre recuperado!", "O código antigo deixou de funcionar. Guarda este novo código.");
+    } catch (e) { $("#msg").textContent = e.message; }
+  }
+}
+function screenRecoveryCode(code, title, extra = "") {
+  let saved = false;
+  show("rcode", formScreen("Código de Recuperação", `
+      <div class="center yellow">${esc(title)}</div>
+      <div class="center" style="margin:12px 0 4px">Se esqueceres a palavra-passe mestra, este código é a <span class="yellow">única</span> forma de abrir o cofre.</div>
+      <div class="codebox" id="code">${esc(code)}</div>
+      <div class="gray">Escreve-o num papel ou guarda o ficheiro num sítio seguro, fora deste computador (pen, cofre físico). Quem o tiver consegue abrir o cofre. Não vai voltar a ser mostrado.${extra ? "<br><br>" + esc(extra) : ""}</div>
+      <div class="rowb" style="margin-top:12px"><button class="btn w2" data-act="copy">Copiar</button><button class="btn w2" data-act="dl">Descarregar .txt</button></div>
+      <div class="col" style="margin-top:8px"><button class="btn full" data-act="ack" id="ack">Já guardei o código: Não</button></div>`,
+    fbtn("done", "Continuar", "disabled id=done")), {
+    acts: {
+      copy: () => copy(code, "Código"),
+      dl: () => {
+        const txt = `PixelVault: código de recuperação\r\n\r\n${code}\r\n\r\nCriado em ${new Date().toLocaleString("pt-PT")}.\r\nGuarda-o fora do computador. Quem o tiver consegue abrir o cofre.\r\n`;
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain" }));
+        a.download = "pixelvault-recuperacao.txt"; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      },
+      ack: () => { saved = !saved; $("#ack").textContent = "Já guardei o código: " + (saved ? "Sim" : "Não"); $("#done").disabled = !saved; },
+      done: () => { $("#code").textContent = ""; screenMain(); },
+    },
+  });
+}
+function screenNewRecovery() {
+  show("newrec", formScreen("Novo Código de Recuperação", `
+      <div class="gray">Gera um código novo. O código antigo deixa de funcionar imediatamente.</div>
+      <label class="lbl">Palavra-passe mestra</label><input class="field" id="m" type="password" autocomplete="current-password" autofocus>
+      <div class="msg red" id="msg"></div>`,
+    fbtn("go", "Gerar Código") + fbtn("back", "Cancelar")), { back: screenOptions, acts: { back: screenOptions, go } });
+  onEnter(".field", go);
+  async function go() {
+    $("#msg").innerHTML = `<span class="gray spin">A gerar</span>`;
+    try { const r = await api("/api/recovery/new", { master: $("#m").value }); await refreshState(); screenRecoveryCode(r.recovery_code, "Código novo gerado!"); }
+    catch (e) { if (!e.locked) $("#msg").textContent = e.message; }
+  }
+}
+
 /* ---------- menu principal ---------- */
 function screenMain() {
   show("main", `<div class="menu">${titleHtml()}
     <button class="btn" data-act="single" autofocus>Um Jogador</button>
     <button class="btn" data-act="multi">Multijogador</button>
-    <button class="btn" data-act="lock">Bloquear Cofre</button>
-    <div class="rowb" style="margin-top:16px"><button class="btn w2" data-act="opts">Opções...</button><button class="btn w2" data-act="quit">Sair</button></div>
+    <button class="btn badge" data-act="direct">Ligação Direta<span class="bdg">${ico("term")}</span></button>
+    <div class="rowb opts-row">
+      <button class="btn sq" data-act="lock" title="Bloquear Cofre" aria-label="Bloquear Cofre">${ico("lock")}</button>
+      <button class="btn half" data-act="opts">Opções...</button><button class="btn half" data-act="quit">Sair</button>
+      <button class="btn sq" data-act="rec" title="Código de Recuperação" aria-label="Código de Recuperação">${ico("shield")}</button>
+    </div>
   </div>${footer()}`, {
     pano: true,
     acts: {
-      single: screenSingle, multi: screenMulti, opts: screenOptions,
+      single: screenSingle, multi: screenMulti, opts: screenOptions, rec: screenNewRecovery,
+      direct: () => screenDirect("", screenMain),
       lock: async () => { try { await api("/api/lock", {}); } catch (e) {} screenLock(); },
       quit: async () => {
         try { await api("/api/quit", {}); } catch (e) {}
@@ -446,7 +579,7 @@ async function screenSingle() {
   });
   $("#q").addEventListener("input", e => { S.filter = e.target.value; renderPw(); });
   renderPw();
-  listKeys($("#lst"), () => visiblePw().map(p => p.id), id => { S.selPw = id; renderPw(); }, () => copyPw(S.selPw));
+  listKeys($("#lst"), () => visiblePw().map(p => p.id), () => S.selPw, id => { S.selPw = id; renderPw(); }, () => copyPw(S.selPw));
 }
 function visiblePw() {
   const q = S.filter.trim().toLowerCase();
@@ -506,9 +639,7 @@ function strength(pw) {
 async function screenPwEdit(p) {
   let current = "";
   if (p) { try { current = (await api("/api/passwords/reveal", { id: p.id })).password; } catch (e) { return fail(e); } }
-  show("pwedit", `
-    <div class="hdr"><div>${p ? "Editar Entrada" : "Criar Nova Entrada"}</div></div>
-    <div class="formwrap"><div class="form">
+  show("pwedit", formScreen(p ? "Editar Entrada" : "Criar Nova Entrada", `
       <label class="lbl">Nome</label><input class="field" id="f-name" maxlength="100" value="${esc(p?.name)}" placeholder="Ex.: Email do trabalho" autofocus>
       <label class="lbl">Utilizador</label>
       <div class="inrow"><input class="field" id="f-user" value="${esc(p?.username)}" autocomplete="off"><button class="btn sm" data-act="cuser">Copiar</button></div>
@@ -519,9 +650,8 @@ async function screenPwEdit(p) {
         <button class="btn sm" data-act="len" id="len">Tamanho: ${GEN.len}</button><button class="btn sm" data-act="sym" id="sym">Símbolos: ${GEN.sym ? "Sim" : "Não"}</button></div>
       <label class="lbl">Site ou endereço</label><input class="field" id="f-url" value="${esc(p?.url)}" placeholder="https://...">
       <label class="lbl">Notas</label><textarea class="field" id="f-notes">${esc(p?.notes)}</textarea>
-      <div class="msg red" id="msg"></div>
-    </div></div>
-    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="save">Guardar</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
+      <div class="msg red" id="msg"></div>`,
+    fbtn("save", "Concluído") + fbtn("back", "Cancelar")), {
     back: screenSingle,
     acts: {
       back: screenSingle, save,
@@ -547,6 +677,7 @@ async function screenPwEdit(p) {
    MULTIJOGADOR: servidores SSH
    ====================================================================== */
 const PING = {};
+const LAN = { items: [], scanning: false, at: 0 };
 async function screenMulti(repinging = true) {
   try { S.servers = (await api("/api/servers")).items; } catch (e) { return fail(e); }
   show("multi", `
@@ -554,53 +685,85 @@ async function screenMulti(repinging = true) {
     <div class="lst" id="lst" tabindex="0"></div>
     <div class="ftr">
       <div class="rowb"><button class="btn w3" data-act="join" data-need>Entrar no Servidor</button><button class="btn w3" data-act="direct">Ligação Direta</button><button class="btn w3" data-act="add">Adicionar Servidor</button></div>
-      <div class="rowb"><button class="btn w4" data-act="edit" data-need>Editar</button><button class="btn w4" data-act="del" data-need>Apagar</button>
+      <div class="rowb"><button class="btn w4" data-act="edit" data-need data-saved>Editar</button><button class="btn w4" data-act="del" data-need data-saved>Apagar</button>
         <button class="btn w4" data-act="refresh">Atualizar</button><button class="btn w4" data-act="back">Cancelar</button></div>
     </div>`, {
     back: screenMain,
     acts: {
-      back: screenMain, add: () => screenSrvEdit(null), direct: screenDirect,
-      join: () => join(S.selSrv),
+      back: screenMain, direct: () => screenDirect("", () => screenMulti(false)),
+      add: () => { const l = lanSel(); screenSrvEdit(null, l ? { host: l.host, name: "Máquina " + l.host } : null); },
+      join: () => joinSel(),
       edit: () => screenSrvEdit(S.servers.find(s => s.id === S.selSrv)),
       del: () => { const s = S.servers.find(s => s.id === S.selSrv); confirmDelete("este servidor", s.name, async () => { await api("/api/servers/delete", { id: s.id }); S.selSrv = null; }, screenMulti); },
-      refresh: () => { for (const k in PING) delete PING[k]; screenMulti(); },
+      refresh: () => { for (const k in PING) delete PING[k]; LAN.at = 0; screenMulti(); },
     },
   });
   if (!S.info?.ssh && !S.sshWarned) (S.sshWarned = true, toast("Falta o ssh", "Não encontrei o cliente OpenSSH neste computador.", true));
   renderSrv();
   $("#lst").focus();
-  listKeys($("#lst"), () => S.servers.map(s => s.id), id => { S.selSrv = id; renderSrv(); }, () => join(S.selSrv));
+  listKeys($("#lst"), () => [...S.servers.map(s => s.id), ...LAN.items.map(l => "lan:" + l.host)], () => S.selSrv,
+    id => { S.selSrv = id; renderSrv(); }, joinSel);
   if (repinging) S.servers.forEach(s => { if (!PING[s.id]) pingSrv(s.id); });
+  if (S.settings?.lan_scan && !LAN.scanning && Date.now() - LAN.at > 60000) scanLan();
+}
+const lanSel = () => S.selSrv?.startsWith("lan:") ? LAN.items.find(l => "lan:" + l.host === S.selSrv) : null;
+function joinSel() {
+  const l = lanSel();
+  if (l) return screenDirect(l.host, () => screenMulti(false));
+  const s = S.servers.find(x => x.id === S.selSrv); if (!s) return;
+  connecting(s.name, () => api("/api/servers/connect", { id: s.id }), s.auth === "password" && s.has_password);
+}
+async function scanLan() {
+  LAN.scanning = true; if (S.screen === "multi") renderSrv();
+  try { LAN.items = (await api("/api/lan/scan", {})).items; LAN.at = Date.now(); } catch (e) { LAN.items = []; }
+  LAN.scanning = false; if (S.screen === "multi") renderSrv();
 }
 function srvAddr(s) { const h = s.host.includes(":") ? `[${s.host}]` : s.host; return (s.username ? s.username + "@" : "") + h + (s.port && s.port !== 22 ? ":" + s.port : ""); }
 const AUTH_LABEL = { password: "palavra-passe guardada", key: "chave SSH", agent: "agente / pedir no terminal" };
+const bars = (n, cls) => `<div class="ping ${cls}">${[1, 2, 3, 4, 5].map(k => `<i class="${k <= n ? "on" : ""}"></i>`).join("")}</div>`;
+const level = ms => ms < 80 ? 5 : ms < 150 ? 4 : ms < 300 ? 3 : ms < 600 ? 2 : 1;
 function renderSrv() {
   const lst = $("#lst"); if (!lst) return;
-  if (!S.servers.some(s => s.id === S.selSrv)) S.selSrv = null;
-  lst.innerHTML = S.servers.length ? S.servers.map((s, i) => {
+  const ids = [...S.servers.map(s => s.id), ...LAN.items.map(l => "lan:" + l.host)];
+  if (!ids.includes(S.selSrv)) S.selSrv = null;
+  let html = S.servers.map((s, i) => {
     const p = PING[s.id];
-    let l2, bars = 0, cls = "wait", ms = "";
-    if (!p || p.pending) l2 = `<span class="dim spin">A comunicar</span>`;
-    else if (!p.ok) { l2 = `<span style="color:#aa0000">Não foi possível ligar: ${esc(p.error)}</span>`; cls = "fail"; }
-    else { l2 = `<span class="dim">${esc(p.banner || "Porta aberta")}</span>`; cls = ""; ms = p.ms + " ms"; bars = p.ms < 80 ? 5 : p.ms < 150 ? 4 : p.ms < 300 ? 3 : p.ms < 600 ? 2 : 1; }
+    let l2, n = 0, cls = "wait", ms = "";
+    if (!p || p.pending) l2 = `<span class="dim">A comunicar...</span>`;
+    else if (!p.ok) { l2 = `<span class="dred">Não foi possível ligar ao servidor</span>`; cls = "fail"; ms = esc(p.error); }
+    else { l2 = `<span class="dim">${esc(p.banner || "Porta aberta")}</span>`; cls = ""; ms = p.ms + " ms"; n = level(p.ms); }
     const auth = s.auth === "password" && !s.has_password ? "pede palavra-passe" : AUTH_LABEL[s.auth] || "";
     return `<div class="row ${s.id === S.selSrv ? "sel" : ""}" data-id="${esc(s.id)}">
       <div class="ico"><img src="${identicon(s.host + s.name, "srv")}" alt="">
-        <div class="mv">${i > 0 ? `<b class="up" data-mv="up" title="Subir"></b>` : ""}${i < S.servers.length - 1 ? `<b class="dn" data-mv="down" title="Descer"></b>` : ""}</div></div>
-      <div class="txt"><div>${esc(s.name)}</div><div>${l2}</div><div class="gray">${esc(srvAddr(s))} <span class="dim">· ${esc(auth)}</span></div></div>
-      <div class="ping ${cls}" title="${esc(ms)}">${[1, 2, 3, 4, 5].map(k => `<i class="${k <= bars ? "on" : ""}"></i>`).join("")}</div>
-      ${ms ? `<div class="ms">${ms}</div>` : ""}
+        <div class="mv"><b class="play" data-play title="Entrar"></b>${i > 0 ? `<b class="up" data-mv="up" title="Subir"></b>` : ""}${i < S.servers.length - 1 ? `<b class="dn" data-mv="down" title="Descer"></b>` : ""}</div></div>
+      <div class="txt"><div class="nm"><span>${esc(s.name)}</span><span class="right"><span class="gray">${ms}</span>${bars(n, cls)}</span></div>
+        <div>${l2}</div><div class="gray">${esc(srvAddr(s))} <span class="dim">· ${esc(auth)}</span></div></div>
     </div>`;
-  }).join("") : `<div class="empty">Ainda não tens servidores.<br>Carrega em «Adicionar Servidor».</div>`;
+  }).join("");
+  if (!S.servers.length) html += `<div class="empty">Ainda não tens servidores.<br>Carrega em «Adicionar Servidor».</div>`;
+  if (S.settings?.lan_scan) {
+    const saved = new Set(S.servers.map(s => s.host));
+    html += LAN.items.filter(l => !saved.has(l.host)).map(l => `
+      <div class="row ${"lan:" + l.host === S.selSrv ? "sel" : ""}" data-id="lan:${esc(l.host)}">
+        <div class="ico"><img src="${identicon(l.host, "srv")}" alt=""></div>
+        <div class="txt"><div class="nm"><span>${l.me ? "Este computador" : "Máquina na rede local"}</span><span class="right"><span class="gray">${l.ms} ms</span>${bars(level(l.ms), "")}</span></div>
+          <div class="dim">${esc(l.banner || "SSH")}</div><div class="gray">${esc(l.host)}</div></div>
+      </div>`).join("");
+    html += `<div class="scan">${LAN.scanning ? `<div>A procurar máquinas na tua rede local</div><div class="ooo"><i></i><i></i><i></i></div>`
+      : `<div class="dim">${LAN.items.length ? "" : "Nenhuma máquina com SSH encontrada na rede local."}</div>`}</div>`;
+  }
+  lst.innerHTML = html;
   $$(".row", lst).forEach(r => {
     r.addEventListener("click", ev => {
       const mv = ev.target.closest("[data-mv]");
       if (mv) { ev.stopPropagation(); click(); moveSrv(r.dataset.id, mv.dataset.mv); return; }
-      S.selSrv = r.dataset.id; renderSrv(); lst.focus();
+      S.selSrv = r.dataset.id;
+      if (ev.target.closest("[data-play]")) { click(); return joinSel(); }
+      renderSrv(); lst.focus();
     });
-    r.addEventListener("dblclick", ev => { if (!ev.target.closest("[data-mv]")) { click(); join(r.dataset.id); } });
+    r.addEventListener("dblclick", ev => { if (!ev.target.closest(".mv b")) { click(); S.selSrv = r.dataset.id; joinSel(); } });
   });
-  $$("[data-need]", app).forEach(b => b.disabled = !S.selSrv);
+  $$("[data-need]", app).forEach(b => b.disabled = !S.selSrv || (b.hasAttribute("data-saved") && !!lanSel()));
 }
 async function pingSrv(id) {
   PING[id] = { pending: true }; renderSrv();
@@ -610,13 +773,11 @@ async function pingSrv(id) {
 async function moveSrv(id, dir) {
   try { await api("/api/servers/move", { id, dir }); S.selSrv = id; S.servers = (await api("/api/servers")).items; renderSrv(); } catch (e) { fail(e); }
 }
-async function join(id) {
-  const s = S.servers.find(x => x.id === id); if (!s) return;
-  connecting(s.name, () => api("/api/servers/connect", { id }), s.auth === "password" && s.has_password);
-}
 function connecting(name, fn, autofill) {
-  show("conn", `<div class="menu"><div class="spin" id="st">A ligar ao servidor</div><div class="gray center panel" id="sub">${esc(name)}</div>
-    <div style="margin-top:24px"><button class="btn" data-act="back" id="bk">Cancelar</button></div></div>`, { back: () => screenMulti(false), acts: { back: () => screenMulti(false) } });
+  show("conn", `<div class="fs"><div class="fs-body center-v"><div class="col">
+    <div class="spin" id="st">A ligar ao servidor</div><div class="gray center panel" id="sub">${esc(name)}</div>
+    <div style="margin-top:24px"><button class="btn" data-act="back" id="bk">Cancelar</button></div></div></div></div>`,
+    { back: () => screenMulti(false), acts: { back: () => screenMulti(false) } });
   fn().then(() => {
     $("#st").classList.remove("spin"); $("#st").textContent = "Terminal aberto!";
     $("#sub").innerHTML = `A sessão SSH com <span class="yellow">${esc(name)}</span> abriu numa janela nova.` +
@@ -640,23 +801,20 @@ function parseAddr(a) {
   return { host, port: port ? +port : 22, user };
 }
 
-function screenSrvEdit(s) {
+function screenSrvEdit(s, prefill = null) {
   const st = { auth: s?.auth || "password" };
-  const addr = s ? (s.host.includes(":") ? `[${s.host}]` : s.host) + (s.port !== 22 ? ":" + s.port : "") : "";
-  show("srvedit", `
-    <div class="hdr"><div>Editar Informação do Servidor</div></div>
-    <div class="formwrap"><div class="form">
-      <label class="lbl">Nome do Servidor</label><input class="field" id="f-name" maxlength="100" value="${esc(s?.name ?? "Servidor")}" autofocus>
+  const addr = s ? (s.host.includes(":") ? `[${s.host}]` : s.host) + (s.port !== 22 ? ":" + s.port : "") : (prefill?.host || "");
+  show("srvedit", formScreen("Editar Informação do Servidor", `
+      <label class="lbl">Nome do Servidor</label><input class="field" id="f-name" maxlength="100" value="${esc(s?.name ?? prefill?.name ?? "Servidor")}" autofocus>
       <label class="lbl">Endereço do Servidor</label><input class="field" id="f-addr" value="${esc(addr)}" placeholder="exemplo.pt ou 10.0.0.5:2222" autocomplete="off">
       <label class="lbl">Utilizador</label><input class="field" id="f-user" value="${esc(s?.username)}" placeholder="root" autocomplete="off">
-      <div style="margin-top:16px"><button class="btn" style="width:100%" data-act="auth" id="auth"></button></div>
+      <div style="margin-top:16px"><button class="btn full" data-act="auth" id="auth"></button></div>
       <div id="pwbox"><label class="lbl">Palavra-passe</label>
-        <div class="inrow"><input class="field" id="f-pw" type="password" autocomplete="new-password" placeholder="${s?.has_password ? "(manter a atual)" : "(deixa vazio para pedir no terminal)"}"><button class="btn sm" data-act="eye" id="eye">Mostrar</button></div></div>
+        <div class="inrow"><input class="field" id="f-pw" type="password" autocomplete="new-password" placeholder="${s?.has_password ? "(manter a atual)" : "(vazio = pedir no terminal)"}"><button class="btn sm" data-act="eye" id="eye">Mostrar</button></div></div>
       <div id="keybox"><label class="lbl">Ficheiro da chave privada</label><input class="field" id="f-key" value="${esc(s?.key_path)}" placeholder="~/.ssh/id_ed25519" autocomplete="off"></div>
       <div class="gray" id="hint" style="margin-top:8px"></div>
-      <div class="msg red" id="msg"></div>
-    </div></div>
-    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="save">Concluído</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
+      <div class="msg red" id="msg"></div>`,
+    fbtn("save", "Concluído") + fbtn("back", "Cancelar")), {
     back: () => screenMulti(false),
     acts: {
       back: () => screenMulti(false), save,
@@ -670,7 +828,7 @@ function screenSrvEdit(s) {
     agent: "Não guarda segredos: usa o ssh-agent ou pergunta tudo no terminal.",
   };
   function paint() {
-    $("#auth").textContent = "Autenticação: " + { password: "Palavra-passe", key: "Chave SSH", agent: "Agente / Pedir" }[st.auth];
+    $("#auth").textContent = "Autenticação: " + { password: "Palavra-passe", key: "Chave SSH", agent: "Perguntar" }[st.auth];
     $("#pwbox").style.display = st.auth === "password" ? "" : "none";
     $("#keybox").style.display = st.auth === "key" ? "" : "none";
     $("#hint").textContent = HINT[st.auth];
@@ -688,17 +846,13 @@ function screenSrvEdit(s) {
   }
 }
 
-function screenDirect() {
-  show("direct", `
-    <div class="hdr"><div>Ligação Direta</div></div>
-    <div class="formwrap"><div class="form" style="margin-top:40px">
-      <label class="lbl">Endereço do Servidor</label><input class="field" id="f-addr" placeholder="utilizador@exemplo.pt:22" autofocus autocomplete="off">
+function screenDirect(prefill = "", back = () => screenMulti(false)) {
+  show("direct", formScreen("Ligação Direta", `
+      <div class="spacer"></div>
+      <label class="lbl">Endereço do Servidor</label><input class="field" id="f-addr" placeholder="utilizador@exemplo.pt:22" value="${esc(prefill)}" autofocus autocomplete="off">
       <div class="gray" style="margin-top:8px">Não fica guardado. O ssh pede o que precisar no terminal.</div>
-      <div class="msg red" id="msg"></div>
-    </div></div>
-    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="go">Entrar no Servidor</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
-    back: () => screenMulti(false), acts: { back: () => screenMulti(false), go },
-  });
+      <div class="msg red" id="msg"></div><div class="spacer"></div>`,
+    fbtn("go", "Entrar no Servidor") + fbtn("back", "Cancelar")), { back, acts: { back, go } });
   onEnter(".field", go);
   function go() {
     const a = parseAddr($("#f-addr").value);
@@ -709,22 +863,21 @@ function screenDirect() {
 
 /* ---------- confirmação de apagar ---------- */
 function confirmDelete(what, name, doit, after) {
-  show("confirm", `<div class="menu">
+  show("confirm", `<div class="fs"><div class="fs-body center-v"><div class="col">
     <div>Tens a certeza que queres apagar ${esc(what)}?</div>
     <div class="gray center panel">«${esc(name)}» será perdido para sempre! (Muito tempo!)</div>
     <div class="rowb" style="margin-top:24px"><button class="btn w2" data-act="yes">Apagar</button><button class="btn w2" data-act="no" autofocus>Cancelar</button></div>
-  </div>`, { back: after, acts: { no: after, yes: async () => { try { await doit(); after(); } catch (e) { fail(e); } } } });
+  </div></div></div>`, { back: after, acts: { no: after, yes: async () => { try { await doit(); after(); } catch (e) { fail(e); } } } });
 }
 
 /* ---------- navegação com teclado nas listas ---------- */
-function listKeys(lst, ids, select, activate) {
+function listKeys(lst, ids, cur, select, activate) {
   lst.addEventListener("keydown", e => {
     const arr = ids(); if (!arr.length) return;
-    const cur = S.screen === "multi" ? S.selSrv : S.selPw;
-    let i = arr.indexOf(cur);
+    const c = cur(), i = arr.indexOf(c);
     if (e.key === "ArrowDown") { e.preventDefault(); select(arr[Math.min(arr.length - 1, i + 1)]); }
     else if (e.key === "ArrowUp") { e.preventDefault(); select(arr[Math.max(0, i - 1)]); }
-    else if (e.key === "Enter" && cur) { e.preventDefault(); click(); activate(); }
+    else if (e.key === "Enter" && c) { e.preventDefault(); click(); activate(); }
     else return;
     const el = $(".row.sel", lst); if (el) el.scrollIntoView({ block: "nearest" });
   });
@@ -740,17 +893,19 @@ function screenOptions() {
   const terms = S.info?.terminals || ["auto"];
   const termLbl = t => t === "auto" ? "Automático" : t;
   show("opts", `
-    <div class="hdr"><div>Opções</div></div>
-    <div class="formwrap"><div style="margin-top:24px" class="col">
+    <div class="fs"><div class="fs-title">Opções</div><div class="fs-body"><div class="col" style="margin-top:8px">
       <div class="rowb"><button class="btn w300" data-act="lock">Bloqueio Automático: ${lockLbl(s.auto_lock_min)}</button>
         <button class="btn w300" data-act="clip">Limpar Cópia: ${clipLbl(s.clipboard_clear_s)}</button></div>
       <div class="rowb"><button class="btn w300" data-act="term" ${terms.length < 2 ? "disabled" : ""}>Terminal: ${esc(termLbl(s.terminal || "auto"))}</button>
         <button class="btn w300" data-act="sound">Sons: ${s.sound === false ? "Desligados" : "Ligados"}</button></div>
-      <div class="rowb" style="margin-top:16px"><button class="btn w300" data-act="master">Mudar Palavra-passe Mestra...</button>
+      <div class="rowb"><button class="btn w300" data-act="lan">Procurar na Rede Local: ${s.lan_scan ? "Sim" : "Não"}</button>
         <button class="btn w300" data-act="lockn">Bloquear Agora</button></div>
-      <div class="gray center panel" style="margin-top:24px">Cofre: ~/.pixelvault/vault.pv<br>AES-256-GCM · scrypt (N=32768)</div>
-    </div></div>
-    <div class="ftr"><button class="btn" data-act="done" autofocus>Concluído</button></div>`, {
+      <div class="rowb" style="margin-top:16px"><button class="btn w300" data-act="master">Mudar Palavra-passe Mestra...</button>
+        <button class="btn w300" data-act="rec">Código de Recuperação...</button></div>
+      <div class="gray center panel" style="margin-top:24px">Cofre: ~/.pixelvault/vault.pv<br>AES-256-GCM · scrypt (N=32768)<br>
+        Recuperação: ${S.info?.has_recovery ? `<span class="green">ativa</span>` : `<span class="red">sem código, gera um!</span>`}</div>
+      <div style="margin-top:24px"><button class="btn" data-act="done" autofocus>Concluído</button></div>
+    </div></div></div>`, {
     back: screenMain,
     acts: {
       done: screenMain,
@@ -758,7 +913,8 @@ function screenOptions() {
       clip: () => cycle("clipboard_clear_s", [10, 20, 30, 60, 0], s.clipboard_clear_s),
       term: () => cycle("terminal", terms, s.terminal || "auto"),
       sound: () => setSetting({ sound: s.sound === false }),
-      master: screenMaster,
+      lan: () => { LAN.at = 0; setSetting({ lan_scan: !s.lan_scan }); },
+      master: screenMaster, rec: screenNewRecovery,
       lockn: async () => { try { await api("/api/lock", {}); } catch (e) {} screenLock(); },
     },
   });
@@ -768,17 +924,13 @@ async function setSetting(patch) {
   try { S.settings = (await api("/api/settings", patch)).settings; screenOptions(); } catch (e) { fail(e); }
 }
 function screenMaster() {
-  show("master", `
-    <div class="hdr"><div>Mudar Palavra-passe Mestra</div></div>
-    <div class="formwrap"><div class="form" style="margin-top:24px">
+  show("master", formScreen("Mudar Palavra-passe Mestra", `
       <label class="lbl">Atual</label><input class="field" id="o" type="password" autocomplete="current-password" autofocus>
       <label class="lbl">Nova (mínimo 8 caracteres)</label><input class="field" id="n1" type="password" autocomplete="new-password">
       <label class="lbl">Repetir a nova</label><input class="field" id="n2" type="password" autocomplete="new-password">
-      <div class="msg red" id="msg"></div>
-    </div></div>
-    <div class="ftr"><div class="rowb"><button class="btn w2" data-act="save">Concluído</button><button class="btn w2" data-act="back">Cancelar</button></div></div>`, {
-    back: screenOptions, acts: { back: screenOptions, save },
-  });
+      <div class="gray" style="margin-top:8px">O código de recuperação continua a funcionar.</div>
+      <div class="msg red" id="msg"></div>`,
+    fbtn("save", "Concluído") + fbtn("back", "Cancelar")), { back: screenOptions, acts: { back: screenOptions, save } });
   onEnter(".field", save);
   async function save() {
     if ($("#n1").value !== $("#n2").value) { $("#msg").textContent = "As novas não coincidem."; return; }
@@ -793,7 +945,7 @@ function screenMaster() {
    ====================================================================== */
 // Se o servidor bloquear sozinho (inatividade), volta ao ecrã de bloqueio.
 setInterval(async () => {
-  if (["lock", "fatal", "bye"].includes(S.screen)) return;
+  if (["lock", "fatal", "bye", "recover"].includes(S.screen)) return;
   try { const st = await api("/api/state"); if (!st.unlocked) screenLock(); } catch (e) {}
 }, 20000);
 
