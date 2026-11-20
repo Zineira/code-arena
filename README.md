@@ -27,10 +27,15 @@ Cofres criados com a versão 1.0 são convertidos automaticamente na primeira ab
 Precisas de Python 3.9+ e do cliente OpenSSH (já vem com o Windows 10/11, o macOS e quase todas as distribuições Linux).
 
 ```bash
+git clone https://github.com/<utilizador>/minevault.git
 cd minevault
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python minevault.py
+python minevault.py              # Windows: py minevault.py
 ```
+
+Nas vezes seguintes basta ativar o `.venv` e correr `python minevault.py`.
 
 O browser abre sozinho em `http://127.0.0.1:<porta>/#t=<token>`. Na primeira vez escolhes a **palavra-passe mestra**. Para sair, usa **Sair** no menu ou `Ctrl+C` na consola.
 
