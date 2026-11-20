@@ -1,4 +1,4 @@
-"""Testes do PixelVault:  python test_pixelvault.py"""
+"""Testes do MineVault:  python test_minevault.py"""
 import json
 import os
 import subprocess
@@ -10,9 +10,9 @@ import urllib.request
 from pathlib import Path
 
 TMP = tempfile.mkdtemp(prefix="pv-test-")
-os.environ["PIXELVAULT_HOME"] = TMP
+os.environ["MINEVAULT_HOME"] = TMP
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import pixelvault as pv  # noqa: E402
+import minevault as pv  # noqa: E402
 
 app = pv.App(pv.Vault(pv.VAULT_FILE))
 httpd = pv.ThreadingHTTPServer(("127.0.0.1", 0), pv.make_handler(app))
@@ -80,7 +80,7 @@ check(cmd == ["/usr/bin/ssh", "-p", "2222", "-l", "pi", "192.168.1.10"], f"coman
 
 # askpass: o ticket entrega a password uma vez, só a programas locais
 t = pv.new_ticket("segredo-ssh")
-env = {**os.environ, "PIXELVAULT_ASKPASS_URL": BASE + "/askpass", "PIXELVAULT_TICKET": t}
+env = {**os.environ, "MINEVAULT_ASKPASS_URL": BASE + "/askpass", "MINEVAULT_TICKET": t}
 out = subprocess.run([sys.executable, "askpass.py", "pi@host's password: "], env=env, capture_output=True,
                      text=True, cwd=Path(__file__).parent, stdin=subprocess.DEVNULL, timeout=20)
 check(out.stdout == "segredo-ssh\n", "askpass devolve a password do ticket")

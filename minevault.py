@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""PixelVault: cofre local de palavras-passe e servidores SSH com um menu estilo jogo de blocos.
+"""MineVault: cofre local de palavras-passe e servidores SSH com um menu estilo jogo de blocos.
 
-- Tudo fica na tua máquina: ~/.pixelvault/vault.pv, cifrado com AES-256-GCM
+- Tudo fica na tua máquina: ~/.minevault/vault.pv, cifrado com AES-256-GCM
   e uma chave derivada da palavra-passe mestra (scrypt).
 - A interface é servida só em 127.0.0.1, com um token aleatório por execução.
 - Ao entrar num servidor abre-se o teu terminal com `ssh`; a palavra-passe
   é entregue ao ssh por SSH_ASKPASS (nunca aparece na linha de comandos).
 
-Uso:  pip install cryptography   e depois   python pixelvault.py
+Uso:  pip install cryptography   e depois   python minevault.py
 """
 from __future__ import annotations
 
@@ -39,13 +39,13 @@ except ImportError:  # pragma: no cover
 VERSION = "1.1"
 HERE = Path(__file__).resolve().parent
 WEB = HERE / "web"
-HOME = Path(os.environ.get("PIXELVAULT_HOME") or (Path.home() / ".pixelvault"))
+HOME = Path(os.environ.get("MINEVAULT_HOME") or (Path.home() / ".minevault"))
 VAULT_FILE = HOME / "vault.pv"
 RUN_DIR = HOME / "run"
 IS_WIN = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
 
-AAD = b"pixelvault-v1"
+AAD = b"pixelvault-v1"  # nome antigo; não mudar, senão os cofres existentes deixam de abrir
 SCRYPT = {"n": 2 ** 15, "r": 8, "p": 1}
 DEFAULT_SETTINGS = {"auto_lock_min": 10, "terminal": "auto", "clipboard_clear_s": 30, "sound": True,
                     "lan_scan": False}
@@ -287,7 +287,7 @@ class Vault:
             assert self.key is not None and self.data is not None
             nonce = secrets.token_bytes(12)
             ct = AESGCM(self.key).encrypt(nonce, json.dumps(self.data).encode("utf-8"), AAD)
-            blob = {"format": "pixelvault", "v": 2, **self.wraps, "nonce": b64e(nonce), "data": b64e(ct)}
+            blob = {"format": "minevault", "v": 2, **self.wraps, "nonce": b64e(nonce), "data": b64e(ct)}
             self.path.parent.mkdir(parents=True, exist_ok=True)
             _private_dir(self.path.parent)
             tmp = self.path.with_suffix(".tmp")
@@ -417,10 +417,10 @@ def launch_ssh(srv: dict, server_port: int, terminal: str):
             "SSH_ASKPASS": askpass_program(),
             "SSH_ASKPASS_REQUIRE": "force",
             "DISPLAY": os.environ.get("DISPLAY", ":0"),
-            "PIXELVAULT_ASKPASS_URL": f"http://127.0.0.1:{server_port}/askpass",
-            "PIXELVAULT_TICKET": new_ticket(srv["password"]),
+            "MINEVAULT_ASKPASS_URL": f"http://127.0.0.1:{server_port}/askpass",
+            "MINEVAULT_TICKET": new_ticket(srv["password"]),
         }
-    title = f"{srv.get('name') or srv.get('host')} - PixelVault"
+    title = f"{srv.get('name') or srv.get('host')} - MineVault"
 
     if IS_WIN:
         full_env = {**os.environ, **env}
@@ -458,7 +458,7 @@ def launch_ssh(srv: dict, server_port: int, terminal: str):
 
 
 def _cmd_safe(s: str) -> str:
-    return re.sub(r'[^A-Za-z0-9 ._\-]', "", s)[:60] or "PixelVault"
+    return re.sub(r'[^A-Za-z0-9 ._\-]', "", s)[:60] or "MineVault"
 
 
 def ping(host: str, port: int) -> dict:
@@ -724,7 +724,7 @@ class App:
 
 def make_handler(app: App):
     class Handler(BaseHTTPRequestHandler):
-        server_version = "PixelVault"
+        server_version = "MineVault"
         sys_version = ""
 
         def log_message(self, *a):  # nada de logs com caminhos/tickets
@@ -808,11 +808,15 @@ def auto_lock_loop(vault: Vault):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="PixelVault: cofre local com menu de jogo de blocos")
+    ap = argparse.ArgumentParser(description="MineVault: cofre local com menu de jogo de blocos")
     ap.add_argument("--port", type=int, default=0, help="porta local (0 = aleatória)")
     ap.add_argument("--no-browser", action="store_true", help="não abrir o browser automaticamente")
     args = ap.parse_args()
 
+    legacy = Path.home() / ".pixelvault"  # nome antigo da app
+    if not os.environ.get("MINEVAULT_HOME") and legacy.is_dir() and not HOME.exists():
+        legacy.rename(HOME)
+        print(f"Pasta antiga {legacy} movida para {HOME}.")
     HOME.mkdir(parents=True, exist_ok=True)
     _private_dir(HOME)
     for old in RUN_DIR.glob("connect-*") if RUN_DIR.exists() else []:
@@ -826,7 +830,7 @@ def main():
     threading.Thread(target=auto_lock_loop, args=(app.vault,), daemon=True).start()
 
     url = f"http://127.0.0.1:{app.port}/#t={app.token}"
-    print(f"PixelVault {VERSION}  ·  cofre: {VAULT_FILE}")
+    print(f"MineVault {VERSION}  ·  cofre: {VAULT_FILE}")
     print(f"Abre no browser:  {url}")
     print("Ctrl+C para sair.")
     if not args.no_browser:

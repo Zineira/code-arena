@@ -977,7 +977,7 @@ def build(out):
     fb.setupHorizontalMetrics(hmtx)
     asc, desc = ASCENT_ROWS * PX, DESCENT_ROWS * PX
     fb.setupHorizontalHeader(ascent=asc, descent=-desc)
-    fb.setupNameTable({"familyName": "PixelVault", "styleName": "Regular"})
+    fb.setupNameTable({"familyName": "MineVault", "styleName": "Regular"})
     fb.setupOS2(sTypoAscender=asc, sTypoDescender=-desc, sTypoLineGap=0,
                 usWinAscent=asc, usWinDescent=desc, fsType=0)
     fb.setupPost()

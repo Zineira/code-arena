@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PixelVault</title>
+<title>MineVault</title>
 <style>
-@font-face { font-family: "PixelVault"; src: url("/pixel.ttf") format("truetype"); font-display: block; }
+@font-face { font-family: "MineVault"; src: url("/pixel.ttf") format("truetype"); font-display: block; }
 :root {
   --dirt: none; --btn: none; --stone: none;
   --txt: #ffffff; --shadow: #3f3f3f; --gray: #a0a0a0; --dim: #808080;
@@ -15,7 +15,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #1b1b1b; overflow: hidden; }
 body {
-  font-family: "PixelVault", ui-monospace, monospace; font-size: 16px; line-height: 22px;
+  font-family: "MineVault", ui-monospace, monospace; font-size: 16px; line-height: 22px;
   color: var(--txt); text-shadow: 2px 2px 0 var(--shadow);
   -webkit-font-smoothing: none; font-smooth: never; user-select: none;
 }
@@ -207,7 +207,7 @@ async function api(path, body) {
   const opt = { method: body === undefined ? "GET" : "POST", headers: { "X-PV-Token": TOKEN } };
   if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
   let r;
-  try { r = await fetch(path, opt); } catch (e) { throw new Error("Sem ligação ao PixelVault. Ele ainda está a correr?"); }
+  try { r = await fetch(path, opt); } catch (e) { throw new Error("Sem ligação ao MineVault. Ele ainda está a correr?"); }
   const j = await r.json().catch(() => ({}));
   if (r.status === 423) { screenLock(); throw new LockedError(); }
   if (!r.ok) throw new Error(j.error || ("Erro " + r.status));
@@ -428,10 +428,10 @@ const SPLASHES = [
 ];
 function titleHtml(splash = true) {
   const s = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
-  return `<div class="title-wrap"><div class="title"><span class="back" aria-hidden="true">PIXELVAULT</span><span class="face">PIXELVAULT</span></div>
+  return `<div class="title-wrap"><div class="title"><span class="back" aria-hidden="true">MINEVAULT</span><span class="face">MINEVAULT</span></div>
     <div class="edition"><span class="back" aria-hidden="true">COFRE LOCAL</span><span class="face">COFRE LOCAL</span></div>${splash ? `<div class="splash">${esc(s)}</div>` : ""}</div>`;
 }
-const footer = () => `<div class="foot"><span>PixelVault ${esc(S.info?.version || "")}</span><span>Feito em casa. Não partilhes a mestra!</span></div>`;
+const footer = () => `<div class="foot"><span>MineVault ${esc(S.info?.version || "")}</span><span>Feito em casa. Não partilhes a mestra!</span></div>`;
 
 /* ---------- bloqueio / criação ---------- */
 async function screenLock() {
@@ -469,7 +469,7 @@ async function screenLock() {
 async function refreshState() { const st = await api("/api/state"); S.info = st; S.settings = st.settings || S.settings; return st; }
 function screenFatal(text) {
   show("fatal", `<div class="menu">${titleHtml(false)}<div class="center red panel">${esc(text)}</div>
-    <div class="center gray panel">Corre <span class="yellow">python pixelvault.py</span> e abre o link que aparece.</div></div>`, { pano: true });
+    <div class="center gray panel">Corre <span class="yellow">python minevault.py</span> e abre o link que aparece.</div></div>`, { pano: true });
 }
 
 /* ---------- recuperação ---------- */
@@ -505,9 +505,9 @@ function screenRecoveryCode(code, title, extra = "") {
     acts: {
       copy: () => copy(code, "Código"),
       dl: () => {
-        const txt = `PixelVault: código de recuperação\r\n\r\n${code}\r\n\r\nCriado em ${new Date().toLocaleString("pt-PT")}.\r\nGuarda-o fora do computador. Quem o tiver consegue abrir o cofre.\r\n`;
+        const txt = `MineVault: código de recuperação\r\n\r\n${code}\r\n\r\nCriado em ${new Date().toLocaleString("pt-PT")}.\r\nGuarda-o fora do computador. Quem o tiver consegue abrir o cofre.\r\n`;
         const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain" }));
-        a.download = "pixelvault-recuperacao.txt"; document.body.appendChild(a); a.click(); a.remove();
+        a.download = "minevault-recuperacao.txt"; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 5000);
       },
       ack: () => { saved = !saved; $("#ack").textContent = "Já guardei o código: " + (saved ? "Sim" : "Não"); $("#done").disabled = !saved; },
@@ -548,7 +548,7 @@ function screenMain() {
       lock: async () => { try { await api("/api/lock", {}); } catch (e) {} screenLock(); },
       quit: async () => {
         try { await api("/api/quit", {}); } catch (e) {}
-        show("bye", `<div class="menu">${titleHtml(false)}<div class="center">O PixelVault foi fechado e o cofre bloqueado.</div><div class="center gray">Podes fechar esta janela.</div></div>`, { pano: true });
+        show("bye", `<div class="menu">${titleHtml(false)}<div class="center">O MineVault foi fechado e o cofre bloqueado.</div><div class="center gray">Podes fechar esta janela.</div></div>`, { pano: true });
       },
     },
   });
@@ -902,7 +902,7 @@ function screenOptions() {
         <button class="btn w300" data-act="lockn">Bloquear Agora</button></div>
       <div class="rowb" style="margin-top:16px"><button class="btn w300" data-act="master">Mudar Palavra-passe Mestra...</button>
         <button class="btn w300" data-act="rec">Código de Recuperação...</button></div>
-      <div class="gray center panel" style="margin-top:24px">Cofre: ~/.pixelvault/vault.pv<br>AES-256-GCM · scrypt (N=32768)<br>
+      <div class="gray center panel" style="margin-top:24px">Cofre: ~/.minevault/vault.pv<br>AES-256-GCM · scrypt (N=32768)<br>
         Recuperação: ${S.info?.has_recovery ? `<span class="green">ativa</span>` : `<span class="red">sem código, gera um!</span>`}</div>
       <div style="margin-top:24px"><button class="btn" data-act="done" autofocus>Concluído</button></div>
     </div></div></div>`, {
@@ -950,7 +950,7 @@ setInterval(async () => {
 }, 20000);
 
 buildTextures();
-document.fonts.load('16px "PixelVault"').finally(async () => {
+document.fonts.load('16px "MineVault"').finally(async () => {
   try { const st = await refreshState(); st.unlocked ? screenMain() : screenLock(); }
   catch (e) { screenFatal(e.message); }
 });
