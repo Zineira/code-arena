@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Programa SSH_ASKPASS do PixelVault.
+"""Programa SSH_ASKPASS do MineVault.
 
 O ssh chama isto com a pergunta em argv[1]. Para a primeira pergunta de palavra-passe
-vai buscar a password ao PixelVault (127.0.0.1) com um ticket de uso único. Qualquer outra
+vai buscar a password ao MineVault (127.0.0.1) com um ticket de uso único. Qualquer outra
 pergunta (impressão digital do anfitrião, segunda tentativa, código 2FA...) é feita
 diretamente no terminal, para seres tu a responder.
 """
@@ -34,8 +34,8 @@ def ask_terminal(prompt: str) -> str:
 
 
 def from_vault() -> str | None:
-    url = os.environ.get("PIXELVAULT_ASKPASS_URL", "")
-    ticket = os.environ.pop("PIXELVAULT_TICKET", "")
+    url = os.environ.get("MINEVAULT_ASKPASS_URL", "")
+    ticket = os.environ.pop("MINEVAULT_TICKET", "")
     if not ticket or not url.startswith("http://127.0.0.1:"):
         return None
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # nunca usar proxy
@@ -54,7 +54,7 @@ def main():
     if "password" in prompt.lower() and "yes/no" not in prompt:
         answer = from_vault()
         if answer is not None:
-            print("[PixelVault] palavra-passe preenchida a partir do cofre.", file=sys.stderr)
+            print("[MineVault] palavra-passe preenchida a partir do cofre.", file=sys.stderr)
     if answer is None:
         answer = ask_terminal(prompt)
     sys.stdout.write(answer + "\n")
